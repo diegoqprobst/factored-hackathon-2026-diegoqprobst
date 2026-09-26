@@ -12,7 +12,7 @@ Real sandbox copy, real router, real OpenRouter model in hybrid mode. Documents 
 - **customer:** <OTP from simulated SMS>
   **agent** [confirm, 2 ms, $0.000000]: Voy a abrir una disputa por Conciertos Live por 378.89 USD el 2026-05-11 (tarjeta •9194), motivo: cargo no reconocido. ¿Confirmas? (sí/no)
 - **customer:** sí
-  **agent** [block_offer, 1 ms, $0.000000]: Listo: abrí la disputa DSP-F5917A1B01 por Conciertos Live por 378.89 USD el 2026-05-11 (tarjeta •9194). Como no reconoces el cargo, te recomiendo bloquear la tarjeta terminada en 9194 para evitar más cargos. ¿La bloqueo? (sí/no)
+  **agent** [block_offer, 1 ms, $0.000000]: Listo: abrí la disputa DSP-07265D975D por Conciertos Live por 378.89 USD el 2026-05-11 (tarjeta •9194). Como no reconoces el cargo, te recomiendo bloquear la tarjeta terminada en 9194 para evitar más cargos. ¿La bloqueo? (sí/no)
 - **customer:** no
   **agent** [done, 0 ms, $0.000000]: Entendido, no bloqueé la tarjeta. ¿Te ayudo con algo más?
 
@@ -28,13 +28,13 @@ Real sandbox copy, real router, real OpenRouter model in hybrid mode. Documents 
 - **customer:** me robaron la tarjeta y hay 3 compras que no hice
   **agent** [auth_doc, 0 ms, $0.000000]: Hola, con gusto te ayudo. Antes de revisar tus movimientos necesito verificar tu identidad: ¿cuál es tu número de documento?
 - **customer:** <document number>
-  **agent** [auth_otp, 0 ms, $0.000000]: Te envié un código de 6 dígitos por SMS al número ***4885. Escríbelo aquí, por favor.
+  **agent** [auth_otp, 1 ms, $0.000000]: Te envié un código de 6 dígitos por SMS al número ***4885. Escríbelo aquí, por favor.
 - **customer:** <OTP from simulated SMS>
-  **agent** [block_offer, 1 ms, $0.000000]: ¿Quieres que bloquee la tarjeta terminada en 9194? Quedará inutilizable y podrás pedir una nueva. (sí/no)
+  **agent** [block_offer, 0 ms, $0.000000]: ¿Quieres que bloquee la tarjeta terminada en 9194? Quedará inutilizable y podrás pedir una nueva. (sí/no)
 - **customer:** sí
-  **agent** [handoff, 1 ms, $0.000000]: Bloqueé la tarjeta terminada en 9194. Voy a pasar tu caso a un asesor porque reportaste cargos con una tarjeta robada y eso lo revisa el equipo de fraude. Ya le envié lo que verificamos, así que no tendrás que repetirlo. Tu referencia es HND-A1CA590B7B.
+  **agent** [handoff, 1 ms, $0.000000]: Bloqueé la tarjeta terminada en 9194. Voy a pasar tu caso a un asesor porque reportaste cargos con una tarjeta robada y eso lo revisa el equipo de fraude. Ya le envié lo que verificamos, así que no tendrás que repetirlo. Tu referencia es HND-6C09A57995.
 
-Metrics: `{'turns': 11, 'conversations': 3, 'handoffs': 1, 'escalation_rate': 0.3333333333333333, 'latency_ms_p50': 0.5, 'latency_ms_p95': 1.4500000000000002, 'cost_usd_total': 0.0, 'cost_usd_per_conversation': 0.0}`
+Metrics: `{'turns': 11, 'conversations': 3, 'handoffs': 1, 'escalation_rate': 0.3333333333333333, 'latency_ms_p50': 0.5, 'latency_ms_p95': 1.5499999999999998, 'cost_usd_total': 0.0, 'cost_usd_per_conversation': 0.0}`
 
 
 ## Mode: hybrid
@@ -42,32 +42,32 @@ Metrics: `{'turns': 11, 'conversations': 3, 'handoffs': 1, 'escalation_rate': 0.
 ### normal (es)
 
 - **customer:** No reconozco un cargo de 379 en Conciertos Live
-  **agent** [auth_doc, 4946 ms, $0.000061]: Hola, con gusto te ayudo. Antes de revisar tus movimientos necesito verificar tu identidad: ¿cuál es tu número de documento?
+  **agent** [auth_doc, 4477 ms, $0.000063]: Hola, con gusto te ayudo. Antes de revisar tus movimientos necesito verificar tu identidad: ¿cuál es tu número de documento?
 - **customer:** <document number>
-  **agent** [auth_otp, 161 ms, $0.000000]: Te envié un código de 6 dígitos por SMS al número ***4885. Escríbelo aquí, por favor.
+  **agent** [auth_otp, 62 ms, $0.000000]: Te envié un código de 6 dígitos por SMS al número ***4885. Escríbelo aquí, por favor.
 - **customer:** <OTP from simulated SMS>
-  **agent** [confirm, 240 ms, $0.000000]: Voy a abrir una disputa por Conciertos Live por 378.89 USD el 2026-05-11 (tarjeta •9194), motivo: cargo no reconocido. ¿Confirmas? (sí/no)
+  **agent** [confirm, 25 ms, $0.000000]: Voy a abrir una disputa por Conciertos Live por 378.89 USD el 2026-05-11 (tarjeta •9194), motivo: cargo no reconocido. ¿Confirmas? (sí/no)
 - **customer:** sí
-  **agent** [block_offer, 3775 ms, $0.000059]: Listo: abrí la disputa DSP-7356F1D618 por Conciertos Live por 378.89 USD el 2026-05-11 (tarjeta •9194). Como no reconoces el cargo, te recomiendo bloquear la tarjeta terminada en 9194 para evitar más cargos. ¿La bloqueo? (sí/no)
+  **agent** [block_offer, 1496 ms, $0.000289]: Listo: abrí la disputa DSP-AEC9CC29FE por Conciertos Live por 378.89 USD el 2026-05-11 (tarjeta •9194). Como no reconoces el cargo, te recomiendo bloquear la tarjeta terminada en 9194 para evitar más cargos. ¿La bloqueo? (sí/no)
 - **customer:** no
-  **agent** [done, 3198 ms, $0.000047]: Entendido, no bloqueé la tarjeta. ¿Te ayudo con algo más?
+  **agent** [done, 2987 ms, $0.000056]: Entendido, no bloqueé la tarjeta. ¿Te ayudo con algo más?
 
 ### ambiguous → unsupported (pt)
 
 - **customer:** Quero um empréstimo
-  **agent** [intake, 3926 ms, $0.000059]: Por este canal só posso ajudar a contestar cobranças e bloquear cartões. Para crédito ou empréstimos, use o app ou a central de atendimento.
+  **agent** [intake, 1536 ms, $0.000293]: Por este canal só posso ajudar a contestar cobranças e bloquear cartões. Para crédito ou empréstimos, use o app ou a central de atendimento.
 - **customer:** oi
-  **agent** [intake, 3831 ms, $0.000047]: Olá! Posso ajudar a contestar uma cobrança que você não reconhece ou a bloquear um cartão. Do que você precisa?
+  **agent** [intake, 4065 ms, $0.000047]: Olá! Posso ajudar a contestar uma cobrança que você não reconhece ou a bloquear um cartão. Do que você precisa?
 
 ### human-required (es)
 
 - **customer:** me robaron la tarjeta y hay 3 compras que no hice
-  **agent** [auth_doc, 1657 ms, $0.000302]: Hola, con gusto te ayudo. Antes de revisar tus movimientos necesito verificar tu identidad: ¿cuál es tu número de documento?
+  **agent** [auth_doc, 3699 ms, $0.000049]: Hola, con gusto te ayudo. Antes de revisar tus movimientos necesito verificar tu identidad: ¿cuál es tu número de documento?
 - **customer:** <document number>
-  **agent** [auth_otp, 78 ms, $0.000000]: Te envié un código de 6 dígitos por SMS al número ***4885. Escríbelo aquí, por favor.
+  **agent** [auth_otp, 67 ms, $0.000000]: Te envié un código de 6 dígitos por SMS al número ***4885. Escríbelo aquí, por favor.
 - **customer:** <OTP from simulated SMS>
-  **agent** [block_offer, 19 ms, $0.000000]: ¿Quieres que bloquee la tarjeta terminada en 9194? Quedará inutilizable y podrás pedir una nueva. (sí/no)
+  **agent** [block_offer, 18 ms, $0.000000]: ¿Quieres que bloquee la tarjeta terminada en 9194? Quedará inutilizable y podrás pedir una nueva. (sí/no)
 - **customer:** sí
-  **agent** [handoff, 1365 ms, $0.000291]: Bloqueé la tarjeta terminada en 9194. Voy a pasar tu caso a un asesor porque reportaste cargos con una tarjeta robada y eso lo revisa el equipo de fraude. Ya le envié lo que verificamos, así que no tendrás que repetirlo. Tu referencia es HND-7A0BBE266E.
+  **agent** [handoff, 777 ms, $0.000291]: Bloqueé la tarjeta terminada en 9194. Voy a pasar tu caso a un asesor porque reportaste cargos con una tarjeta robada y eso lo revisa el equipo de fraude. Ya le envié lo que verificamos, así que no tendrás que repetirlo. Tu referencia es HND-FFFDFEC5AE.
 
-Metrics: `{'turns': 11, 'conversations': 3, 'handoffs': 1, 'escalation_rate': 0.3333333333333333, 'latency_ms_p50': 1657.3, 'latency_ms_p95': 4436.0, 'cost_usd_total': 0.000865, 'cost_usd_per_conversation': 0.0002883333333333333}`
+Metrics: `{'turns': 11, 'conversations': 3, 'handoffs': 1, 'escalation_rate': 0.3333333333333333, 'latency_ms_p50': 1496.3, 'latency_ms_p95': 4271.15, 'cost_usd_total': 0.001089, 'cost_usd_per_conversation': 0.000363}`

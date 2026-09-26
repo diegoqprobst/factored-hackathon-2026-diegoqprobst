@@ -94,10 +94,8 @@ def create_app(conn=None, agent=None, demo_mode: bool | None = None) -> FastAPI:
         conv = store.get(cid) if demo else None
         if conv is None or not conv.challenge_id:
             raise HTTPException(404, "not available")
-        row = conn.execute(
-            "select o.body from otp_challenges c join customers u on u.customer_id = c.customer_id "
-            "join sandbox_outbox o on o.destination = u.mobile_phone where c.challenge_id = ? "
-            "order by o.id desc limit 1", (conv.challenge_id,)).fetchone()
+        row = conn.execute("select body from sandbox_outbox where challenge_id = ? order by id desc limit 1",
+                           (conv.challenge_id,)).fetchone()
         if row is None:
             raise HTTPException(404, "not available")
         return {"sms": row["body"], "note": "SIMULATED SMS - demo mode only"}

@@ -1,4 +1,4 @@
-.PHONY: setup download pipeline test router-data router serve serve-baseline
+.PHONY: setup download pipeline test router-data router serve serve-demo serve-baseline
 
 setup:
 	uv sync
@@ -19,7 +19,10 @@ router:
 	uv run --group embeddings python -m src.router.evaluate
 
 serve:
+	uv run --group embeddings --env-file .env uvicorn --factory src.agent.api:create_app --port 8000
+
+serve-demo:
 	DEMO_MODE=1 uv run --group embeddings --env-file .env uvicorn --factory src.agent.api:create_app --port 8000
 
 serve-baseline:
-	DEMO_MODE=1 AGENT_MODE=baseline uv run --env-file .env uvicorn --factory src.agent.api:create_app --port 8000
+	AGENT_MODE=baseline uv run --env-file .env uvicorn --factory src.agent.api:create_app --port 8000

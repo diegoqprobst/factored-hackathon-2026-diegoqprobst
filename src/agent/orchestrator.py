@@ -10,6 +10,7 @@ from src.agent.handoff import build_handoff, save_handoff
 from src.agent.state import Conversation, Stage
 from src.agent.tools import ToolNotAllowed, Tools, ToolUnavailable
 from src.agent.trace import Tracer, persist
+from src.bank.policy import load_policy
 from src.bank.auth import verify_session
 from src.bank.errors import (AccountNotServiceable, BankError, NoVerifiedChannel, OtpExpired, OtpInvalid, OtpLocked,
                              PolicyViolation, SessionExpired, SessionInvalid)
@@ -43,6 +44,7 @@ class Agent:
         self.conn, self.router, self.extractor, self.mode, self.faults = conn, router, extractor, mode, faults
         self.max_low_confidence, self.max_injections = max_low_confidence, max_injections
         self.max_not_found, self.max_choose_retries = max_not_found, max_choose_retries
+        self.multi_charges = load_policy().human_review_dispute_count  # same threshold as policy P5
 
     # ---- entry point -------------------------------------------------------------------------------------------
     def handle(self, conv: Conversation, message: str) -> TurnResult:
@@ -76,10 +78,15 @@ class Agent:
         route = self.router.predict(text)
         tracer.record("router", intent=route.intent, confidence=round(route.confidence, 3), language=route.language,
                       injection=route.injection, abstain=route.abstain, model=route.model_version)
-        if _has_words(text) and (conv.stage in (Stage.INTAKE, Stage.DONE) or not route.abstain):
-            conv.language = route.language
+        if _has_words(text) and (conv.stage in (Stage.INTAKE, Stage.DONE)
+                                 or (conv.stage is Stage.IDENTIFY and not route.abstain)):
+            conv.language = route.language  # short answers at confirm/choose/auth steps never switch language
         ext = self.extractor.extract(text, conv.stage, self._context(conv), tracer=tracer)
         tracer.record("extraction", source=ext.source, fields=ext.present_fields())
+        if ext.charges_count:  # declared charges are noted at every stage, never dropped
+            conv.charges_count = max(conv.charges_count or 0, ext.charges_count)
+        if not route.abstain and conv.stage in (Stage.INTAKE, Stage.IDENTIFY, Stage.CLASSIFY):
+            conv.low_conf_count = 0
         if route.injection:
             conv.injection_count += 1
             tracer.record("injection_detected", count=conv.injection_count)
@@ -138,6 +145,9 @@ class Agent:
         return "otp_sent", {"masked": challenge.masked_destination}
 
     def _auth_otp(self, conv, route, ext, tracer, tools):
+        if not ext.otp_code and ext.document_number:  # the customer corrected their document number
+            conv.stage = Stage.AUTH_DOC
+            return self._auth_doc(conv, route, ext, tracer, tools)
         if not ext.otp_code:
             return "ask_otp", {}
         try:
@@ -150,11 +160,21 @@ class Agent:
         except OtpLocked:
             return self._handoff(conv, tracer, "identity_not_verified")
         conv.token, conv.customer_id = token, verify_session(token).customer_id
+        if conv.previous_customer_id and conv.previous_customer_id != conv.customer_id:
+            conv.reset_case()  # a different customer: nothing from the previous case may carry over
+            conv.disputes, conv.actions = [], []
+            tracer.record("customer_changed")
+        conv.previous_customer_id = None
         conv.actions.append({"action": "authenticate", "verified": True})
         tracer.record("authenticated")
         return self._after_auth(conv, tracer, tools)
 
     def _after_auth(self, conv, tracer, tools):
+        resume, conv.resume_stage = conv.resume_stage, None
+        if resume is Stage.BLOCK_OFFER and conv.product_id:
+            conv.stage = Stage.BLOCK_OFFER
+            card = tools.call(conv.stage, "get_card", token=conv.token, product_id=conv.product_id)
+            return "offer_block", {"last4": card.last4}
         if conv.intent == "card_lost_stolen":
             return self._start_block_flow(conv, tracer, tools)
         if conv.transaction_id and conv.dispute_type:
@@ -249,10 +269,19 @@ class Agent:
             return "confirm_dispute", {"txn": conv.selected_view, "dispute_type": conv.dispute_type}
         if decision.outcome == "requires_human":
             return self._handoff(conv, tracer, f"policy_{decision.rule_id}")
+        if (conv.charges_count or 0) >= self.multi_charges:  # other declared charges still need review
+            return self._handoff(conv, tracer, "policy_P5")
         conv.stage = Stage.DONE
         return "ineligible", {"rule": decision.rule_id, "existing": decision.existing_dispute_id or ""}
 
+    def _new_case(self, route) -> bool:
+        return not route.abstain and (route.intent in DISPUTE_INTENTS or route.intent == "card_lost_stolen")
+
     def _confirm(self, conv, route, ext, tracer, tools):
+        if ext.confirm is not True and self._new_case(route):
+            conv.charges_count = max(conv.charges_count or 0, len(conv.disputes) + 2)
+            return "confirm_dispute", {"txn": conv.selected_view, "dispute_type": conv.dispute_type,
+                                       "lead_key": "lead_one_at_a_time"}
         if ext.confirm is None:
             return "confirm_dispute", {"txn": conv.selected_view, "dispute_type": conv.dispute_type}
         if ext.confirm is False:
@@ -265,12 +294,13 @@ class Agent:
                                  customer_confirmed=True, declared_disputed_count=self._declared_count(conv))
         except PolicyViolation as exc:
             return self._apply_decision(conv, tracer, exc.decision)
+        action = {"action": "create_dispute", "id": created.dispute_id, "verified": False}
+        conv.actions.append(action)  # recorded before the read-back, so a failed read-back still reaches the human
         stored = tools.call(conv.stage, "get_dispute", token=conv.token, dispute_id=created.dispute_id)
         if (stored.transaction_id, stored.status) != (conv.transaction_id, "open"):
-            conv.actions.append({"action": "create_dispute", "id": created.dispute_id, "verified": False})
             return self._handoff(conv, tracer, "action_not_verified")
         conv.disputes.append(stored.dispute_id)
-        conv.actions.append({"action": "create_dispute", "id": stored.dispute_id, "verified": True})
+        action["verified"] = True
         tracer.record("action_verified", action="create_dispute", id=stored.dispute_id)
         last4 = (conv.selected_view or {}).get("card_last4")
         card = next((c for c in tools.call(conv.stage, "list_cards", token=conv.token)
@@ -296,18 +326,24 @@ class Agent:
 
     def _block_offer(self, conv, route, ext, tracer, tools):
         card = tools.call(conv.stage, "get_card", token=conv.token, product_id=conv.product_id)
+        if ext.confirm is not True and self._new_case(route):
+            conv.charges_count = max(conv.charges_count or 0, len(conv.disputes) + 1)
+            return "offer_block", {"last4": card.last4, "lead_key": "lead_one_at_a_time"}
         if ext.confirm is None:
             return "offer_block", {"last4": card.last4}
         if ext.confirm is False:
+            if conv.intent == "card_lost_stolen" and conv.charges_count:
+                return self._handoff(conv, tracer, "stolen_card_with_charges")
             conv.stage = Stage.DONE
             return "block_declined", {}
         tools.call(conv.stage, "block_card", token=conv.token, product_id=conv.product_id, customer_confirmed=True,
                    reason=conv.intent or "customer_request")
+        action = {"action": "block_card", "id": conv.product_id, "verified": False}
+        conv.actions.append(action)
         stored = tools.call(conv.stage, "get_card", token=conv.token, product_id=conv.product_id)
         if stored.status != "Blocked":
-            conv.actions.append({"action": "block_card", "id": conv.product_id, "verified": False})
             return self._handoff(conv, tracer, "action_not_verified")
-        conv.actions.append({"action": "block_card", "id": conv.product_id, "verified": True})
+        action["verified"] = True
         tracer.record("action_verified", action="block_card", id=conv.product_id)
         if conv.intent == "card_lost_stolen" and conv.charges_count:
             return self._handoff(conv, tracer, "stolen_card_with_charges", lead_key="lead_card_blocked",
@@ -337,6 +373,9 @@ class Agent:
 
     # ---- exits -------------------------------------------------------------------------------------------------
     def _session_lost(self, conv, tracer):
+        conv.previous_customer_id = conv.customer_id or conv.previous_customer_id
+        if conv.stage in (Stage.CONFIRM, Stage.BLOCK_OFFER):
+            conv.resume_stage = conv.stage
         conv.token = conv.customer_id = conv.challenge_id = None
         conv.stage = Stage.AUTH_DOC
         tracer.record("session_expired")

@@ -28,7 +28,7 @@ create table if not exists otp_challenges (
   attempts integer not null default 0, consumed integer not null default 0, created_at text not null);
 create table if not exists sandbox_outbox (
   id integer primary key autoincrement, channel text not null, destination text not null,
-  body text not null, created_at text not null);
+  body text not null, created_at text not null, challenge_id text);
 create table if not exists disputes (
   dispute_id text primary key, idempotency_key text not null unique, session_id text not null,
   customer_id text not null, transaction_id text not null, dispute_type text not null, status text not null,
@@ -62,5 +62,13 @@ def connect(path: str | Path) -> sqlite3.Connection:
     return conn
 
 
+# Columns added after the first schema version: (table, column, declaration). Applied to existing databases.
+MIGRATIONS = [("sandbox_outbox", "challenge_id", "text")]
+
+
 def create_schema(conn: sqlite3.Connection) -> None:
     conn.executescript(SCHEMA)
+    for table, column, decl in MIGRATIONS:
+        if column not in {r[1] for r in conn.execute(f"pragma table_info({table})")}:
+            conn.execute(f"alter table {table} add column {column} {decl}")
+    conn.commit()

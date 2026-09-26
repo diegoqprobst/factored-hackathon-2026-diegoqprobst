@@ -45,6 +45,8 @@ class Conversation:
     choose_retries: int = 0
     handoff_id: str | None = None
     turns: int = 0
+    previous_customer_id: str | None = None  # set when a session is lost, to detect a different customer re-authenticating
+    resume_stage: Stage | None = None  # the step to go back to after re-authentication
 
     def remember(self, ext) -> None:
         for name in SLOT_FIELDS:
@@ -58,4 +60,5 @@ class Conversation:
         self.intent = self.dispute_type = self.transaction_id = self.selected_view = None
         self.product_id = self.decision = self.charges_count = None
         self.slots, self.candidates, self.choose_kind = {}, [], "transaction"
-        self.not_found_count = self.choose_retries = 0
+        self.not_found_count = self.choose_retries = self.low_conf_count = 0
+        self.resume_stage = None

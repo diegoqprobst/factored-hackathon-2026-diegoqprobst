@@ -36,8 +36,8 @@ def _urllib_transport(api_key: str):
 
 
 class OpenRouterLLM:
-    def __init__(self, model: str = DEFAULT_MODEL, *, api_key: str | None = None, timeout: float = 20.0,
-                 max_retries: int = 2, transport=None, sleep=time.sleep):
+    def __init__(self, model: str = DEFAULT_MODEL, *, api_key: str | None = None, timeout: float = 15.0,
+                 max_retries: int = 1, transport=None, sleep=time.sleep):
         self.model, self.timeout, self.max_retries, self._sleep = model, timeout, max_retries, sleep
         self._transport = transport or _urllib_transport(api_key or os.environ["OPENROUTER_API_KEY"])
 

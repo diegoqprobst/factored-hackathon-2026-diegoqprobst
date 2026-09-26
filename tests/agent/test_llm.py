@@ -21,7 +21,7 @@ def test_complete_parses_text_usage_and_cost():
         return OK
     r = OpenRouterLLM("m", api_key="k", transport=transport).complete([{"role": "user", "content": "hi"}])
     assert (r.text, r.model, r.prompt_tokens, r.completion_tokens, r.cost_usd) == ('{"a": 1}', "m", 200, 20, 0.00006)
-    assert seen["body"]["usage"] == {"include": True} and seen["body"]["temperature"] == 0.0 and seen["timeout"] == 20.0
+    assert seen["body"]["usage"] == {"include": True} and seen["body"]["temperature"] == 0.0 and seen["timeout"] == 15.0
 
 
 def test_retries_transient_errors_with_backoff():
@@ -32,7 +32,7 @@ def test_retries_transient_errors_with_backoff():
         if len(calls) < 3:
             raise http_error(429) if len(calls) == 1 else TimeoutError()
         return OK
-    r = OpenRouterLLM("m", api_key="k", transport=transport, sleep=slept.append).complete([])
+    r = OpenRouterLLM("m", api_key="k", transport=transport, max_retries=2, sleep=slept.append).complete([])
     assert r.text == '{"a": 1}' and len(calls) == 3 and slept == [0.5, 1.0]
 
 

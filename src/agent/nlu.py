@@ -4,7 +4,7 @@ import re
 from dataclasses import asdict, dataclass, fields
 from datetime import date, timedelta
 
-from src.agent.llm import LLMError, parse_json_object
+from src.agent.llm import parse_json_object
 from src.agent.state import Stage
 from src.bank import config
 from src.bank.policy import DISPUTE_TYPES
@@ -13,8 +13,12 @@ from src.router.labels import DISPUTE_TYPE_BY_INTENT, normalize
 
 TYPE_BY_NUMBER = {1: "unrecognized", 2: "duplicate", 3: "amount_mismatch", 4: "undue_fee", 5: "refund_not_received"}
 YES = {"si", "s", "dale", "ok", "okay", "confirmo", "confirmar", "correcto", "claro", "afirmativo", "sim", "isso",
-       "pode", "exato", "yes", "listo", "perfecto", "bora", "confirma", "hazlo", "adelante", "certo"}
+       "pode", "exato", "yes", "listo", "perfecto", "bora", "confirma", "hazlo", "adelante", "certo", "vale"}
 NO = {"no", "nao", "cancela", "cancelar", "negativo", "nop", "nope", "jamas", "nunca"}
+# Words allowed around a yes/no without changing its meaning. Anything else (a question, a condition, a new
+# request) makes the answer "unclear" and the agent asks again: a write needs an unambiguous yes.
+FILLER = {"por", "favor", "gracias", "obrigado", "obrigada", "porfa", "please", "pls", "ya", "va", "bueno", "pues",
+          "entonces", "senor", "senora", "de", "acuerdo", "mesmo", "mejor", "eso", "esa"}
 ORDINALS = {"primero": 1, "primera": 1, "primeiro": 1, "segundo": 2, "segunda": 2, "tercero": 3, "tercera": 3,
             "terceiro": 3, "cuarto": 4, "quarto": 4, "quinto": 5, "ultimo": -1, "ultima": -1}
 WORD_NUMBERS = {"dos": 2, "dois": 2, "duas": 2, "tres": 3, "cuatro": 4, "quatro": 4, "cinco": 5, "varios": 3,
@@ -86,18 +90,31 @@ def parse_dates(text: str, today: date) -> tuple[date | None, date | None]:
 
 
 def parse_confirm(text: str) -> bool | None:
-    words = re.findall(r"[a-z]+", normalize(text or ""))
-    yes, no = any(w in YES for w in words), any(w in NO for w in words)
-    if yes and not no:
+    raw = text or ""
+    if "?" in raw or "¿" in raw:
+        return None
+    words = re.findall(r"[a-z]+", normalize(raw))
+    if words and all(w in YES or w in FILLER for w in words) and any(w in YES for w in words):
         return True
-    if no and not yes:
+    if words and all(w in NO or w in FILLER for w in words) and any(w in NO for w in words):
         return False
     return None
 
 
+_CURRENCY_AFTER = re.compile(r"\s*(pesos?|reales|reais|real|d[oó]lares|usd|cop|mxn|ars|brl|mil|k)\b", re.I)
+_DOCUMENT_CUE = re.compile(r"\b(documento|cedula|dni|curp|pasaporte|passaporte|cpf|rg|identidad|identificacion)\b")
+
+
+def _currency_context(text: str, start: int, end: int) -> bool:
+    return bool(_CURRENCY_AFTER.match(text, end)) or text[:start].rstrip().endswith(("$", "R$"))
+
+
 def parse_document(text: str) -> str | None:
-    m = re.search(r"(?<![\w])([A-Za-z]?\d[\d. -]{1,14}\d)(?![\w])", text or "")
-    return re.sub(r"[. -]", "", m.group(1)).upper() if m else None
+    text = text or ""
+    for m in re.finditer(r"(?<![\w$])([A-Za-z]?\d[\d. -]{1,14}\d)(?![\w])", text):
+        if not _currency_context(text, m.start(), m.end()):
+            return re.sub(r"[. -]", "", m.group(1)).upper()
+    return None
 
 
 def parse_otp(text: str) -> str | None:
@@ -144,7 +161,9 @@ class RuleExtractor:
         if stage is Stage.AUTH_DOC:
             return Extraction(document_number=parse_document(text))
         if stage is Stage.AUTH_OTP:
-            return Extraction(otp_code=parse_otp(text))
+            otp = parse_otp(text)
+            corrected = parse_document(text) if not otp and _DOCUMENT_CUE.search(normalize(text)) else None
+            return Extraction(otp_code=otp, document_number=corrected)
         route = _KEYWORDS.predict(text)
         dispute_type = DISPUTE_TYPE_BY_INTENT.get(route.intent) if not route.abstain else None
         choice = _choice(text) if stage is Stage.CHOOSE else None
@@ -173,12 +192,27 @@ SYSTEM_PROMPT = (
     "(ayer/ontem, la semana pasada) using today. Use null when the message does not say it.")
 
 
+_EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
+_LONG_NUMBER = re.compile(r"(?<![\w$])\+?\d[\d .-]{4,}\d(?![\w])")
+
+
+def redact(text: str) -> str:
+    """Remove e-mails and document/phone-like digit runs (6+ digits not in a money context) before the LLM."""
+    text = _EMAIL.sub("<email>", text)
+
+    def number(m):
+        if len(re.sub(r"\D", "", m.group(0))) < 6 or _currency_context(m.string, m.start(), m.end()):
+            return m.group(0)
+        return "<number>"
+    return _LONG_NUMBER.sub(number, text)
+
+
 def build_extraction_messages(text: str, stage: Stage, context: dict | None, today: date) -> list[dict]:
     user = f"Stage: {stage.value}\n"
     options = (context or {}).get("options") or []
     if options:
         user += "Options shown to the customer:\n" + "\n".join(f"{i}. {o}" for i, o in enumerate(options, 1)) + "\n"
-    user += f"<customer_message>\n{text}\n</customer_message>"
+    user += f"<customer_message>\n{redact(text)}\n</customer_message>"
     return [{"role": "system", "content": SYSTEM_PROMPT.format(today=today.isoformat())},
             {"role": "user", "content": user}]
 
@@ -232,7 +266,7 @@ class LLMExtractor:
                               latency_ms=resp.latency_ms)
             llm_fields = validate_llm_fields(parse_json_object(resp.text), self.today,
                                              len((context or {}).get("options") or []))
-        except (LLMError, ValueError) as exc:
+        except Exception as exc:  # any LLM/transport/parsing failure: the rules result keeps the conversation going
             if tracer:
                 tracer.record("llm_error", error=type(exc).__name__)
             return Extraction(**{**asdict(base), "source": "llm_fallback"})
@@ -240,8 +274,9 @@ class LLMExtractor:
         for name, value in llm_fields.items():
             if name in ("wants_human", "wants_refund_or_credit"):
                 merged[name] = merged[name] or value
-            elif name == "confirm":
-                merged[name] = False if base.confirm is False else (value if value is not None else base.confirm)
+            elif name == "confirm":  # a write needs rules AND model to agree on yes; either "no" wins
+                merged[name] = (False if base.confirm is False or (base.confirm is None and value is False)
+                                else True if base.confirm is True and value is True else None)
             elif value is not None:
                 merged[name] = value
         merged["source"] = "llm"

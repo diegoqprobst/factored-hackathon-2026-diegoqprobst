@@ -29,6 +29,9 @@ def _open_questions(conv: Conversation) -> list[str]:
         questions.append("dispute type not stated")
     if conv.charges_count and conv.charges_count > 1:
         questions.append(f"customer reports {conv.charges_count} disputed charges")
+    for a in conv.actions:
+        if a.get("verified") is False:
+            questions.append(f"verify status of {a['action']} {a.get('id')} (write not confirmed by read-back)")
     return questions
 
 
