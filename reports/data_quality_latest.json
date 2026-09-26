@@ -1,0 +1,44 @@
+{
+  "run_id": "20260926T152859Z",
+  "source_manifest_sha256": "78972aec08de40ba66a4c079e1b248d98459c3db027b331b7ad55c41367ccd58",
+  "tables": {
+    "customers": {
+      "rows_in": 150000,
+      "quarantined": 0,
+      "duplicates_removed": 0,
+      "rows_out": 150000,
+      "reject_reasons": {}
+    },
+    "products": {
+      "rows_in": 400000,
+      "quarantined": 0,
+      "duplicates_removed": 0,
+      "rows_out": 400000,
+      "reject_reasons": {}
+    },
+    "transactions": {
+      "rows_in": 4425008,
+      "quarantined": 0,
+      "duplicates_removed": 0,
+      "rows_out": 4425008,
+      "reject_reasons": {},
+      "fk_quarantined": 0,
+      "fk_reasons": {},
+      "tz_offset_violations": 51
+    },
+    "complaints": {
+      "rows_in": 67095,
+      "quarantined": 0,
+      "duplicates_removed": 0,
+      "rows_out": 67095,
+      "reject_reasons": {}
+    },
+    "daily_exchange_rates": {
+      "rows_in": 13164,
+      "quarantined": 0,
+      "duplicates_removed": 0,
+      "rows_out": 13164,
+      "reject_reasons": {}
+    }
+  }
+}
