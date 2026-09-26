@@ -585,7 +585,7 @@ WORD_NUMBERS = {"dos": 2, "dois": 2, "duas": 2, "tres": 3, "cuatro": 4, "quatro"
                 "varias": 3}
 REFUND_OR_CREDIT = re.compile(r"(provisional|provisori|compensa[cç]|abon[ae]n?me|devu[eé]lv[ae]n?me|"
                               r"reembols[ea]n?me|me reembolse|devolva[m]? (o |meu )?dinheiro|credito na conta)")
-_AMOUNT = re.compile(r"(?<![\w/.,-])(\d{1,3}(?:[.,]\d{3})+|\d+)([.,]\d{1,2})?\s*(mil\b|k\b)?"
+_AMOUNT = re.compile(r"(?<![\w/.,-])(\d{1,3}(?:[.,]\d{3})+|\d+)([.,]\d{1,2})?(?!\d)\s*(mil\b|k\b)?"
                      r"(?!\s*(?:[/-]\d|veces\b|vezes\b|d[ií]as\b|dias\b|semanas\b|meses\b|horas\b|x\b|cargos\b|compras\b|cobros\b|"
                      r"cobran[cç]as\b|transacciones\b|transa[cç][oõ]es\b|movimientos\b|consumos\b))")
 _DATE = re.compile(r"(?<!\d)(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?(?!\d)")
