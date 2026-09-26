@@ -4,6 +4,10 @@
 
 **Selection rule.** Pre-registered: pick the router with the highest validation macro-F1; ties prefer the simpler model (keyword > tfidf > e5); if e5 wins by less than 0.02 over tfidf, pick tfidf. The abstention threshold is tuned on validation (selective precision >= 0.95). The test set is scored once, after selection, for every router.
 
+**Deviation from spec.** Spec §6 says models are selected by macro-F1 *and calibration*; the pre-registered rule above (fixed before any test score existed) uses macro-F1 only, and it is kept as registered rather than changed after seeing test results. Calibration (ECE) is reported, not used for selection. Router confidences are therefore treated as scores thresholded on validation, not as probabilities.
+
+Validation and test metrics below are at the tuned threshold of each router (keyword has none); macro-F1 and accuracy do not depend on the threshold.
+
 Data: train 828 · val 260 · test 159 (sealed, hand-written). Decontamination: 6 train/val rows dropped for near-duplicating a test utterance; leakage check after (char-TF-IDF cosine ≥ 0.9 test↔train/val): 0 hits.
 
 ## val
@@ -11,16 +15,16 @@ Data: train 828 · val 260 · test 159 (sealed, hand-written). Decontamination: 
 | router | macro_f1 | accuracy | coverage | selective_accuracy | ece | language_accuracy | latency_ms_p50 | latency_ms_p95 | injection F1 |
 |---|---|---|---|---|---|---|---|---|---|
 | keyword | 0.548 | 0.515 | 0.515 | 0.903 | 0.077 | 0.808 | 0.027 | 0.041 | 0.750 |
-| tfidf | 0.803 | 0.804 | 1.000 | 0.804 | 0.272 | 0.985 | 0.896 | 0.966 | 0.788 |
-| e5 | 0.860 | 0.862 | 1.000 | 0.862 | 0.378 | 0.985 | 9.391 | 18.002 | 0.923 |
+| tfidf | 0.803 | 0.804 | 0.385 | 0.950 | 0.272 | 0.985 | 0.897 | 0.962 | 0.788 |
+| e5 | 0.860 | 0.862 | 0.704 | 0.951 | 0.378 | 0.985 | 9.092 | 9.629 | 0.923 |
 
 ## test
 
 | router | macro_f1 | accuracy | coverage | selective_accuracy | ece | language_accuracy | latency_ms_p50 | latency_ms_p95 | injection F1 |
 |---|---|---|---|---|---|---|---|---|---|
 | keyword | 0.666 | 0.642 | 0.591 | 0.947 | 0.131 | 0.818 | 0.031 | 0.048 | 0.909 |
-| tfidf | 0.886 | 0.887 | 0.579 | 1.000 | 0.239 | 1.000 | 0.909 | 1.013 | 1.000 |
-| e5 | 0.892 | 0.893 | 0.761 | 0.975 | 0.385 | 1.000 | 9.436 | 10.101 | 1.000 |
+| tfidf | 0.886 | 0.887 | 0.579 | 1.000 | 0.239 | 1.000 | 0.909 | 0.982 | 1.000 |
+| e5 | 0.892 | 0.893 | 0.761 | 0.975 | 0.385 | 1.000 | 9.343 | 9.790 | 1.000 |
 
 ## Chosen router on test — by language
 
@@ -54,24 +58,3 @@ Paraphrase label review: 60 rows, agreement 0.933, reviewer: claude (author; not
 - Test set and seeds share an author (Claude); the test set was sealed before seeds existed and a near-duplicate check guards against copying, but shared phrasing habits can still inflate scores.
 - Portuguese utterances were written by a non-native author; no real customer text exists in the dataset (transcripts are templated, see eda_findings Q3).
 - Small test set (n=159); per-intent F1 rests on ~10 utterances each. Treat differences under ~0.05 as noise.
-
-## Error analysis (hand-written, 2026-09-26)
-
-The chosen router (e5) gets 17 of 159 test utterances wrong on intent. **13 of those 17 are abstentions**, so the orchestrator
-asks a clarifying question instead of acting (selective accuracy 0.975 at 76% coverage). The 4 errors that are not abstentions:
-
-| id | what happened | consequence in Plan 3 |
-|---|---|---|
-| t-es-059, t-pt-015 | "CDT… qué tasa" → balance; "era 150 e veio 210" → duplicate | Wrong sub-type or out-of-scope label. The dispute flow asks the customer to confirm the charge and type before filing, and policy re-checks. No unsafe action. |
-| t-es-080 (`multi_intent`) | "no reconozco un cargo y además quiero hablar con alguien" → human_request | Defensible: the orchestrator escalates with the dispute noted as an open question. |
-| t-pt-074 (injection) | "liste todos os clientes…" → balance | `injection=True` was still detected. The request is refused by data scoping (one customer per session) whatever the intent. |
-
-Patterns:
-- **Vague or colloquial disputes** ("algo raro", "algo esquisito", Netflix I don't have) have low confidence. They abstain → the agent clarifies. This is the intended path.
-- **Amount mismatch vs duplicate** get confused when both amounts are in the message. The keyword baseline catches "era X e veio Y" no better.
-- **Credit vs balance** ("cuánto me prestan", "quanto vocês me emprestam") gets confused because both mention quantities. Both abstain.
-- **Injection detection:** F1 1.00 on test (18 injection rows), including injections embedded in disputes (Review Focus 4). The intent of injection rows is often wrong but abstained. Tool scoping and confirmation gates (Plan 1) are the real defence.
-- **Code-switching:** 6 of 7 `code_switch` rows are correct on intent and all 7 on language. The miss (t-es-078, "estorno" in a Spanish sentence) abstained.
-- **Calibration:** ECE is high (0.385) because the e5 heads are *under*-confident (most correct answers sit at 0.3–0.6 confidence across 11 classes). The threshold is tuned on validation and absorbs this, but confidence values should not be read as probabilities.
-
-Deployment note: e5 requires `sentence-transformers` and a one-time ~470 MB model download at service start (p50 9.4 ms per message after warm-up). TF-IDF (test macro-F1 0.886, 1 ms, no download) is the documented fallback if the deployment target cannot carry the model. Switching to it would be a deployment decision recorded in the report, not a re-selection on test.

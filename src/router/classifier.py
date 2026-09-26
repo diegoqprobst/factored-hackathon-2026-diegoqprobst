@@ -1,6 +1,7 @@
 """Probabilistic router: one feature extractor per head, logistic-regression heads for intent, injection and
 language. Features are either TF-IDF (char + word n-grams) or multilingual-e5-small sentence embeddings."""
 import json
+import threading
 from pathlib import Path
 
 import joblib
@@ -14,6 +15,9 @@ from src.router.keyword import KeywordRouter
 from src.router.labels import MAX_CHARS, Example, RouterResult, normalize
 
 
+E5_REVISION = "614241f622f53c4eeff9890bdc4f31cfecc418b3"  # pinned HF commit of intfloat/multilingual-e5-small
+
+
 def tfidf_features() -> FeatureUnion:
     return FeatureUnion([
         ("char", TfidfVectorizer(analyzer="char_wb", ngram_range=(2, 5), sublinear_tf=True, preprocessor=normalize)),
@@ -21,11 +25,23 @@ def tfidf_features() -> FeatureUnion:
     ])
 
 
-class E5Featurizer(BaseEstimator, TransformerMixin):
-    """Sentence embeddings; the encoder is loaded lazily and never pickled (artifact stays small)."""
+_ENCODER_LOCK = threading.Lock()
 
-    def __init__(self, model_name: str = "intfloat/multilingual-e5-small", encoder=None):
+
+def _load_encoder(model_name: str, revision: str):
+    from sentence_transformers import SentenceTransformer
+    model = SentenceTransformer(model_name, revision=revision)
+    return lambda ts: model.encode(ts, normalize_embeddings=True, batch_size=64)
+
+
+class E5Featurizer(BaseEstimator, TransformerMixin):
+    """Sentence embeddings at a pinned model revision; the encoder is loaded once (thread-safe), lazily, and is
+    never pickled (the artifact stays small)."""
+
+    def __init__(self, model_name: str = "intfloat/multilingual-e5-small", revision: str = E5_REVISION,
+                 encoder=None):
         self.model_name = model_name
+        self.revision = revision
         self.encoder = encoder
 
     def fit(self, X, y=None):
@@ -33,9 +49,9 @@ class E5Featurizer(BaseEstimator, TransformerMixin):
 
     def transform(self, X):
         if self.encoder is None:
-            from sentence_transformers import SentenceTransformer
-            model = SentenceTransformer(self.model_name)
-            self.encoder = lambda ts: model.encode(ts, normalize_embeddings=True, batch_size=64)
+            with _ENCODER_LOCK:
+                if self.encoder is None:
+                    self.encoder = _load_encoder(self.model_name, getattr(self, "revision", E5_REVISION))
         return np.asarray(self.encoder(["query: " + t for t in X]))
 
     def __getstate__(self):
@@ -114,4 +130,10 @@ def load_router(path: Path = Path("models/router_v1")):
     meta = json.loads(meta_path.read_text())
     if meta["model"] == "keyword":
         return KeywordRouter()
-    return joblib.load(path / "router.joblib")
+    router = joblib.load(path / "router.joblib")  # pickle: only ever load repo-controlled artifacts
+    try:
+        router.predict_many(["warmup"])  # fail at startup, not on the first customer message; loads the encoder
+    except ImportError as exc:
+        raise RuntimeError(f"router '{meta['model']}' needs the optional 'embeddings' dependency group "
+                           "(uv sync --group embeddings), or ship the tfidf router instead") from exc
+    return router
