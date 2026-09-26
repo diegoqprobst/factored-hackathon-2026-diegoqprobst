@@ -14,3 +14,6 @@ test:
 
 router-data:
 	uv run --env-file .env python -m src.router.paraphrase
+
+router:
+	uv run --group embeddings python -m src.router.evaluate

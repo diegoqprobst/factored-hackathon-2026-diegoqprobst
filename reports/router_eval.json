@@ -1,0 +1,241 @@
+{
+  "chosen": "e5",
+  "threshold": 0.3558977246284485,
+  "dataset_hash": "d0fa40d9fae26fa1c29d783c1970f8d79dd3abf5b1c0ad9217c42e0fb120a84e",
+  "n_train": 828,
+  "n_val": 260,
+  "n_test": 159,
+  "leakage_hits": 0,
+  "decontaminated": 6,
+  "val": {
+    "keyword": {
+      "n": 260,
+      "macro_f1": 0.5478244674106955,
+      "accuracy": 0.5153846153846153,
+      "per_class_f1": {
+        "dispute_unrecognized": 0.4666666666666667,
+        "dispute_duplicate": 0.5116279069767442,
+        "dispute_amount_mismatch": 0.35714285714285715,
+        "dispute_undue_fee": 0.8695652173913043,
+        "dispute_refund_not_received": 0.8524590163934426,
+        "card_lost_stolen": 0.47058823529411764,
+        "human_request": 0.3333333333333333,
+        "oos_balance_movements": 0.6,
+        "oos_credit": 0.8421052631578947,
+        "oos_other": 0.2709677419354839,
+        "greeting_smalltalk": 0.45161290322580644
+      },
+      "per_language_macro_f1": {
+        "es": 0.5240956574289908,
+        "pt": 0.545607913409771
+      },
+      "n_by_language": {
+        "es": 125,
+        "pt": 135
+      },
+      "coverage": 0.5153846153846153,
+      "selective_accuracy": 0.9029850746268657,
+      "ece": 0.07692307692307694,
+      "language_accuracy": 0.8076923076923077,
+      "injection": {
+        "precision": 1.0,
+        "recall": 0.6,
+        "f1": 0.75
+      },
+      "latency_ms_p50": 0.02700049662962556,
+      "latency_ms_p95": 0.040967023232951746
+    },
+    "tfidf": {
+      "n": 260,
+      "macro_f1": 0.803345226422816,
+      "accuracy": 0.8038461538461539,
+      "per_class_f1": {
+        "dispute_unrecognized": 0.7659574468085106,
+        "dispute_duplicate": 0.9166666666666666,
+        "dispute_amount_mismatch": 0.7796610169491526,
+        "dispute_undue_fee": 0.8979591836734694,
+        "dispute_refund_not_received": 0.9393939393939394,
+        "card_lost_stolen": 0.9090909090909091,
+        "human_request": 0.8648648648648649,
+        "oos_balance_movements": 0.8,
+        "oos_credit": 0.6060606060606061,
+        "oos_other": 0.5,
+        "greeting_smalltalk": 0.8571428571428571
+      },
+      "per_language_macro_f1": {
+        "es": 0.8602820181767549,
+        "pt": 0.741204727505037
+      },
+      "n_by_language": {
+        "es": 125,
+        "pt": 135
+      },
+      "coverage": 1.0,
+      "selective_accuracy": 0.8038461538461539,
+      "ece": 0.27160968588884526,
+      "language_accuracy": 0.9846153846153847,
+      "injection": {
+        "precision": 1.0,
+        "recall": 0.65,
+        "f1": 0.7878787878787878
+      },
+      "latency_ms_p50": 0.8960420964285731,
+      "latency_ms_p95": 0.966489251004532
+    },
+    "e5": {
+      "n": 260,
+      "macro_f1": 0.8598534537760621,
+      "accuracy": 0.8615384615384616,
+      "per_class_f1": {
+        "dispute_unrecognized": 0.723404255319149,
+        "dispute_duplicate": 0.8936170212765957,
+        "dispute_amount_mismatch": 0.9583333333333334,
+        "dispute_undue_fee": 0.8444444444444444,
+        "dispute_refund_not_received": 0.9253731343283582,
+        "card_lost_stolen": 0.9090909090909091,
+        "human_request": 0.8372093023255814,
+        "oos_balance_movements": 0.8205128205128205,
+        "oos_credit": 0.9302325581395349,
+        "oos_other": 0.68,
+        "greeting_smalltalk": 0.9361702127659575
+      },
+      "per_language_macro_f1": {
+        "es": 0.8590583897760933,
+        "pt": 0.8620108152716849
+      },
+      "n_by_language": {
+        "es": 125,
+        "pt": 135
+      },
+      "coverage": 1.0,
+      "selective_accuracy": 0.8615384615384616,
+      "ece": 0.37798053169479734,
+      "language_accuracy": 0.9846153846153847,
+      "injection": {
+        "precision": 0.9473684210526315,
+        "recall": 0.9,
+        "f1": 0.9230769230769231
+      },
+      "latency_ms_p50": 9.39139601541683,
+      "latency_ms_p95": 18.002335773780942
+    }
+  },
+  "test": {
+    "keyword": {
+      "n": 159,
+      "macro_f1": 0.666194849628133,
+      "accuracy": 0.6415094339622641,
+      "per_class_f1": {
+        "dispute_unrecognized": 0.6923076923076923,
+        "dispute_duplicate": 0.9285714285714286,
+        "dispute_amount_mismatch": 0.15384615384615385,
+        "dispute_undue_fee": 0.8461538461538461,
+        "dispute_refund_not_received": 0.75,
+        "card_lost_stolen": 0.7142857142857143,
+        "human_request": 0.8,
+        "oos_balance_movements": 0.6956521739130435,
+        "oos_credit": 0.4,
+        "oos_other": 0.39080459770114945,
+        "greeting_smalltalk": 0.9565217391304348
+      },
+      "per_language_macro_f1": {
+        "es": 0.6406740261672563,
+        "pt": 0.6819014319014319
+      },
+      "n_by_language": {
+        "es": 80,
+        "pt": 79
+      },
+      "coverage": 0.5911949685534591,
+      "selective_accuracy": 0.9468085106382979,
+      "ece": 0.13102725366876314,
+      "language_accuracy": 0.8176100628930818,
+      "injection": {
+        "precision": 1.0,
+        "recall": 0.8333333333333334,
+        "f1": 0.9090909090909091
+      },
+      "latency_ms_p50": 0.0310409814119339,
+      "latency_ms_p95": 0.0478999805636704
+    },
+    "tfidf": {
+      "n": 159,
+      "macro_f1": 0.8863198141057379,
+      "accuracy": 0.8867924528301887,
+      "per_class_f1": {
+        "dispute_unrecognized": 0.875,
+        "dispute_duplicate": 0.9032258064516129,
+        "dispute_amount_mismatch": 0.8181818181818182,
+        "dispute_undue_fee": 0.8387096774193549,
+        "dispute_refund_not_received": 0.9285714285714286,
+        "card_lost_stolen": 0.8387096774193549,
+        "human_request": 1.0,
+        "oos_balance_movements": 0.8571428571428571,
+        "oos_credit": 0.8181818181818182,
+        "oos_other": 0.8717948717948718,
+        "greeting_smalltalk": 1.0
+      },
+      "per_language_macro_f1": {
+        "es": 0.8724649088285452,
+        "pt": 0.9010590568077201
+      },
+      "n_by_language": {
+        "es": 80,
+        "pt": 79
+      },
+      "coverage": 0.5786163522012578,
+      "selective_accuracy": 1.0,
+      "ece": 0.23925542285423856,
+      "language_accuracy": 1.0,
+      "injection": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms_p50": 0.9087920188903809,
+      "latency_ms_p95": 1.0128040798008442
+    },
+    "e5": {
+      "n": 159,
+      "macro_f1": 0.8920388736673022,
+      "accuracy": 0.8930817610062893,
+      "per_class_f1": {
+        "dispute_unrecognized": 0.7857142857142857,
+        "dispute_duplicate": 0.9090909090909091,
+        "dispute_amount_mismatch": 0.8181818181818182,
+        "dispute_undue_fee": 0.9032258064516129,
+        "dispute_refund_not_received": 0.8571428571428571,
+        "card_lost_stolen": 0.9411764705882353,
+        "human_request": 0.967741935483871,
+        "oos_balance_movements": 0.8387096774193549,
+        "oos_credit": 0.9090909090909091,
+        "oos_other": 0.8823529411764706,
+        "greeting_smalltalk": 1.0
+      },
+      "per_language_macro_f1": {
+        "es": 0.8860877387615355,
+        "pt": 0.8974550053567785
+      },
+      "n_by_language": {
+        "es": 80,
+        "pt": 79
+      },
+      "coverage": 0.7610062893081762,
+      "selective_accuracy": 0.9752066115702479,
+      "ece": 0.38455989516381206,
+      "language_accuracy": 1.0,
+      "injection": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "latency_ms_p50": 9.436374995857477,
+      "latency_ms_p95": 10.101087880320847
+    }
+  },
+  "label_review": {
+    "n": 60,
+    "agreement": 0.9333333333333333,
+    "reviewer": "claude (author; not independent)"
+  }
+}
