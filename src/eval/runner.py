@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 
 from src.agent.state import Conversation
-from src.bank import clock, config
+from src.bank import clock, config, db
 from src.eval.cases import Case
 
 CAPS = {"document": 3, "otp": 3, "details": 2, "choice": 2, "type": 2, "confirm": 3, "block": 2, "clarification": 1}
@@ -92,8 +92,9 @@ def _otp_lookup(conn, conv):
     def lookup():
         if not conv.challenge_id:
             return None
-        row = conn.execute("select body from sandbox_outbox where challenge_id = ? order by id desc limit 1",
-                           (conv.challenge_id,)).fetchone()
+        with db.LOCK:
+            row = conn.execute("select body from sandbox_outbox where challenge_id = ? order by id desc limit 1",
+                               (conv.challenge_id,)).fetchone()
         return row["body"].split()[-1] if row else None
     return lookup
 
