@@ -39,3 +39,17 @@ def test_test_set_is_valid_complete_and_sealed():
     assert sum(r.get("note") == "code_switch" for r in recs) >= TEST_MIN_CODE_SWITCH
     sealed_hash = (DATA_DIR / "SEALED").read_text().split()[0]
     assert sealed_hash == hashlib.sha256(path.read_bytes()).hexdigest(), "test set changed after sealing"
+
+
+from src.router.labels import SEED_MIN_INJECTION_PER_LANG, SEED_MIN_PER_CELL  # noqa: E402
+
+
+def test_seeds_are_valid_complete_and_disjoint_from_test():
+    seeds = load_jsonl(DATA_DIR / "seeds.jsonl")
+    assert validate_records(seeds, "seed_id") == []
+    counts = cell_counts(seeds)
+    assert [(i, l) for i in INTENTS for l in LANGUAGES if counts[(i, l)] < SEED_MIN_PER_CELL] == []
+    for lang in LANGUAGES:
+        assert sum(s["injection"] and s["language"] == lang for s in seeds) >= SEED_MIN_INJECTION_PER_LANG
+    test_texts = {normalize(r["text"]).strip() for r in load_jsonl(DATA_DIR / "test_handwritten.jsonl")}
+    assert [s["seed_id"] for s in seeds if normalize(s["text"]).strip() in test_texts] == []
