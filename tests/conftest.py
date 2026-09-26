@@ -70,3 +70,8 @@ def bank(tmp_path):
     conn.commit()
     yield conn
     conn.close()
+
+
+@pytest.fixture(autouse=True)
+def _session_secret(monkeypatch):
+    monkeypatch.setenv("BANK_SESSION_SECRET", "test-secret-not-for-production")

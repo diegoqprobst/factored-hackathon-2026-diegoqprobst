@@ -58,3 +58,7 @@ class PolicyViolation(BankError):
     def __init__(self, decision):
         super().__init__(decision.reason)
         self.decision = decision
+
+
+class IdempotencyConflict(BankError):
+    code = "idempotency_conflict"

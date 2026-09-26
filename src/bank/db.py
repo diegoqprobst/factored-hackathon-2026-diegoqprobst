@@ -1,5 +1,6 @@
 """SQLite sandbox: read-only banking tables (loaded by the pipeline) + writable service tables."""
 import sqlite3
+import threading
 from pathlib import Path
 
 SCHEMA = """
@@ -24,7 +25,7 @@ create table if not exists complaint_flags (
   customer_id text primary key, complaint_count integer not null, is_repeat_complainer integer not null);
 create table if not exists otp_challenges (
   challenge_id text primary key, customer_id text, code_hash text not null, expires_at text not null,
-  attempts integer not null default 0, consumed integer not null default 0);
+  attempts integer not null default 0, consumed integer not null default 0, created_at text not null);
 create table if not exists sandbox_outbox (
   id integer primary key autoincrement, channel text not null, destination text not null,
   body text not null, created_at text not null);
@@ -32,6 +33,7 @@ create table if not exists disputes (
   dispute_id text primary key, idempotency_key text not null unique, session_id text not null,
   customer_id text not null, transaction_id text not null, dispute_type text not null, status text not null,
   policy_rule text not null, policy_version text not null, created_at text not null);
+create unique index if not exists ux_open_dispute on disputes(customer_id, transaction_id) where status = 'open';
 create table if not exists card_blocks (
   block_id text primary key, product_id text not null, customer_id text not null, session_id text not null,
   reason text not null, created_at text not null);
@@ -42,6 +44,10 @@ create table if not exists load_runs (
   run_id text primary key, started_at text not null, mode text not null, since text,
   rows_loaded integer not null);
 """
+
+# Serialises check-then-act writes across threads sharing one connection (FastAPI runs sync handlers in a
+# threadpool). Re-entrant because service writes call audit.log and other services while holding it.
+LOCK = threading.RLock()
 
 
 def connect(path: str | Path) -> sqlite3.Connection:

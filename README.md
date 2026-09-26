@@ -7,7 +7,7 @@ structured human handoff. Design: `docs/superpowers/specs/2026-09-26-dispute-age
 ## Setup
 
 ```bash
-cp .env.example .env   # fill in the organizer-provided read-only S3 keys
+cp .env.example .env   # fill in the S3 keys and a random BANK_SESSION_SECRET (required; placeholders are rejected)
 make setup
 make download          # S3 -> data/raw (+ lineage manifest)
 make pipeline          # data/raw -> data/silver (contracts, quarantine, quality report) -> data/sandbox.db
