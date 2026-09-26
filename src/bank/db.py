@@ -43,6 +43,12 @@ create table if not exists audit_log (
 create table if not exists load_runs (
   run_id text primary key, started_at text not null, mode text not null, since text,
   rows_loaded integer not null);
+create table if not exists handoffs (
+  handoff_id text primary key, conversation_id text not null, customer_id text, reason text not null,
+  payload text not null, created_at text not null);
+create table if not exists agent_traces (
+  trace_id text primary key, conversation_id text not null, turn integer not null, stage text not null,
+  events text not null, latency_ms real not null, cost_usd real not null, created_at text not null);
 """
 
 # Serialises check-then-act writes across threads sharing one connection (FastAPI runs sync handlers in a
