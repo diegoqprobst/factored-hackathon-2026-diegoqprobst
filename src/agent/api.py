@@ -47,9 +47,10 @@ class ConversationStore:
 
 
 def metrics_summary(conn) -> dict:
-    rows = conn.execute("select latency_ms, cost_usd from agent_traces").fetchall()
-    conversations = conn.execute("select count(distinct conversation_id) from agent_traces").fetchone()[0]
-    handoffs = conn.execute("select count(distinct conversation_id) from handoffs").fetchone()[0]
+    with db.LOCK:
+        rows = conn.execute("select latency_ms, cost_usd from agent_traces").fetchall()
+        conversations = conn.execute("select count(distinct conversation_id) from agent_traces").fetchone()[0]
+        handoffs = conn.execute("select count(distinct conversation_id) from handoffs").fetchone()[0]
     latencies = [r["latency_ms"] for r in rows]
     total = round(sum(r["cost_usd"] for r in rows), 6)
     return {"turns": len(rows), "conversations": conversations, "handoffs": handoffs,
@@ -86,7 +87,8 @@ def create_app(conn=None, agent=None, demo_mode: bool | None = None) -> FastAPI:
 
     @app.get("/v1/conversations/{cid}/trace")
     def trace(cid: str):
-        rows = conn.execute("select * from agent_traces where conversation_id = ? order by turn", (cid,)).fetchall()
+        with db.LOCK:
+            rows = conn.execute("select * from agent_traces where conversation_id = ? order by turn", (cid,)).fetchall()
         return [{**dict(r), "events": json.loads(r["events"])} for r in rows]
 
     @app.get("/v1/demo/sms/{cid}")
@@ -94,8 +96,9 @@ def create_app(conn=None, agent=None, demo_mode: bool | None = None) -> FastAPI:
         conv = store.get(cid) if demo else None
         if conv is None or not conv.challenge_id:
             raise HTTPException(404, "not available")
-        row = conn.execute("select body from sandbox_outbox where challenge_id = ? order by id desc limit 1",
-                           (conv.challenge_id,)).fetchone()
+        with db.LOCK:
+            row = conn.execute("select body from sandbox_outbox where challenge_id = ? order by id desc limit 1",
+                               (conv.challenge_id,)).fetchone()
         if row is None:
             raise HTTPException(404, "not available")
         return {"sms": row["body"], "note": "SIMULATED SMS - demo mode only"}

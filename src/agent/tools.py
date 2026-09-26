@@ -5,7 +5,7 @@ import sqlite3
 import time
 
 from src.agent.state import Stage
-from src.bank import auth, cards, disputes, transactions
+from src.bank import auth, cards, db, disputes, transactions
 from src.bank.errors import BankError
 
 STAGE_TOOLS = {
@@ -53,7 +53,8 @@ class Tools:
                 if self.faults and self.faults.get(name, 0) > 0:
                     self.faults[name] -= 1
                     raise sqlite3.OperationalError("injected fault")
-                result = REGISTRY[name](self.conn, **kwargs)
+                with db.LOCK:  # one sqlite connection is shared by concurrent conversations: serialise all access
+                    result = REGISTRY[name](self.conn, **kwargs)
             except BankError as exc:
                 self._trace(name, stage, attempts, start, args, error=exc.code)
                 raise
