@@ -49,7 +49,7 @@ def test_escalation_and_reason():
     s = score(case("escalate", reasons=["policy_P4"]), run(handoff={"escalation_reason": "policy_P4"}), [])
     assert (s["success"], s["reason_ok"]) == (True, True)
     s2 = score(case("escalate", reasons=["policy_P4"]), run(handoff={"escalation_reason": "internal_error"}), [])
-    assert (s2["success"], s2["reason_ok"]) == (True, False)
+    assert (s2["success"], s2["reason_ok"]) == (False, False)
     assert not score(case("escalate", reasons=["policy_P4"]), run(), [])["success"]
 
 

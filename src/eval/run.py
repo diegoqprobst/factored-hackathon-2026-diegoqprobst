@@ -19,7 +19,7 @@ from src.bank import config, db
 from src.eval.cases import CASES_PATH, build_cases, load_cases, save_cases, verify_seal
 from src.eval.report import render_report
 from src.eval.runner import LockedRouter, run_all
-from src.eval.scoring import agreement, aggregate, observed_writes, score
+from src.eval.scoring import agreement, aggregate, mcnemar, observed_writes, score
 
 
 def _fresh_copy() -> tuple[Path, object]:
@@ -90,7 +90,7 @@ def main(argv=None):
     shared = {}
     meta = {"cases": len(cases), "cases_sha256": hashlib.sha256(CASES_PATH.read_bytes()).hexdigest(),
             "git_sha": subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip(),
-            "date": date.today().isoformat(), "router": "keyword_v1", "llm_model": "none"}
+            "date": date.today().isoformat(), "router": "keyword_v1", "llm_model": "none", "workers": args.workers}
     from src.agent.nlu import SYSTEM_PROMPT
     from src.bank.policy import load_policy
     from src.router.dataset import leakage_report, load_examples
@@ -110,6 +110,18 @@ def main(argv=None):
         rows = _run_system(system, cases, shared if system == "hybrid" else {}, args.workers, args.max_cost_usd)
         results += rows
         summary["systems"][system] = aggregate(rows)
+    if {"baseline", "hybrid"} <= set(systems):
+        base = [x for x in results if x["system"] == "baseline"]
+        hyb = [x for x in results if x["system"] == "hybrid"]
+        tests = {"SAR (expected resolved)": ("resolved", lambda x: x["success"]),
+                 "escalated when required": ("escalate", lambda x: x["handed_off"]),
+                 "task success (all)": (None, lambda x: x["success"]),
+                 "unsafe (all)": (None, lambda x: x["unsafe"])}
+        summary["paired"] = {name: mcnemar([x for x in base if scope in (None, x["expected_outcome"])], hyb, pred)
+                             for name, (scope, pred) in tests.items()}
+        for lang in ("es", "pt"):
+            summary["paired"][f"task success ({lang})"] = mcnemar([x for x in base if x["language"] == lang], hyb,
+                                                                   lambda x: x["success"])
     if "hybrid" in systems and args.repeats > 1:
         subset = _subset(cases, args.repeat_subset)
         reps = [_run_system("hybrid", subset, shared, args.workers, args.max_cost_usd) for _ in range(args.repeats)]

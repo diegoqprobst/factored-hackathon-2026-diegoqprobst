@@ -28,7 +28,8 @@ def render_report(summary: dict) -> str:
     table("Safe automated resolution", [
         ("SAR (in-scope = expected resolved)", lambda s: _r(s["sar"])),
         ("automation attempted", lambda s: _r(s["attempt_share"])),
-        ("containment (no transfer, all cases)", lambda s: _r(s["containment"]))])
+        ("containment (no transfer, all cases)", lambda s: _r(s["containment"])),
+        ("contained AND successful", lambda s: _r(s["contained_successful"]))])
     table("Escalation quality", [
         ("escalated when required", lambda s: _r(s["escalation"]["escalated"])),
         ("correct reason", lambda s: _r(s["escalation"]["reason_correct"])),
@@ -56,16 +57,31 @@ def render_report(summary: dict) -> str:
               "|---" * (len(names) + 1) + "|"])
     for c in cats:
         L.append(f"| {c} | " + " | ".join(_r(S[n]["by_category"].get(c, {})) for n in names) + " |")
+    paired = summary.get("paired")
+    if paired:
+        L.extend(["## Paired comparison (same cases, exact McNemar)", "",
+                  "Both systems ran the identical sealed cases, so differences are tested per case: counts of cases "
+                  "where only one system meets the criterion, and the two-sided exact p-value.", "",
+                  "| criterion | pairs | baseline only | hybrid only | p |", "|---|---|---|---|---|"])
+        for name, t in paired.items():
+            L.append(f"| {name} | {t['pairs']} | {t['a_only']} | {t['b_only']} | {t['p']:.4f} |")
+        L.append("")
     rep = summary.get("repeats")
     L.extend(["", "## Repeated runs (hybrid)", ""])
-    L.append(f"{rep['cases']} cases × {len(rep['sar_by_rep'])} runs on fresh sandbox copies: per-case outcome "
+    L.append(f"{rep['cases']} cases × {len(rep['sar_by_rep'])} runs on fresh sandbox copies: per-case success "
              f"agreement {rep['agreement_rate']:.1%}; SAR by run {rep['sar_by_rep']} (min {rep['sar_min']}, "
-             f"max {rep['sar_max']})." if rep else "Not run.")
+             f"max {rep['sar_max']}). Agreement compares the success flag only (temperature 0)."
+             if rep and rep.get("agreement_rate") is not None else "Not run.")
     L.extend(["", "## Limitations", "",
               "- Offline simulation on synthetic data. These are not production measurements and not business savings.",
               "- The customer is scripted and deterministic. Real customers are messier, so measured SAR is an upper bound for the phrasing variety tested.",
               "- Portuguese cases reuse MX/CO/AR sandbox customers with Portuguese messages written by a non-native author.",
               "- Case messages and router seeds share an author; overlap with router training data is reported above.",
-              "- Per-category n is 6–24. Differences inside overlapping CIs are not evidence of a difference.",
-              "- Unsafe = 0 in n cases does not establish zero risk; the upper CI bound is the honest statement.", ""])
+              "- Per-category n is 6–24. Overlapping marginal CIs are not a test; use the paired comparison above.",
+              "- Unsafe = 0 in n cases does not establish zero risk; the upper CI bound is the honest statement.",
+              "- Containment alone rewards failing to escalate; read it with 'contained AND successful'.",
+              "- 'safe' (injection) cases are scored as 'no unsafe effect' and are excluded from the escalation "
+              "statistics, because both resolving and escalating are acceptable there.",
+              f"- Latency was measured with {m.get('workers', '?')} parallel conversations sharing one serialised "
+              "database connection and one locked router, so p50/p95 include queueing.", ""])
     return "\n".join(L)
