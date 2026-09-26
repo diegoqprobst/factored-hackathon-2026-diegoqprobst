@@ -42,3 +42,19 @@ The agent is a finite-state machine: authenticate → identify the charge → cl
 - **Traces.** Every turn writes a trace (`agent_traces`: router decision, tool calls, policy rule and version, LLM tokens and cost) available at `/v1/conversations/{id}/trace`. Aggregate latency, cost and escalation are at `/v1/metrics`.
 - **Demo mode.** `DEMO_MODE=1` (`make serve-demo`) exposes the simulated SMS (OTP) for the conversation's own challenge at `/v1/demo/sms/{id}`; with it on, anyone who knows a document number can authenticate, so it exists only for the demo.
 - **PII to the LLM.** Credentials never reach the LLM; e-mails and document- or phone-like numbers are redacted from every other message before it is sent.
+
+## Evaluation (held-out, offline)
+
+230 sealed scripted conversations in ES/PT, built from real sandbox records (normal, ambiguous, unsupported, human-required, adversarial). Full report: `reports/eval_report.md`; error analysis with root causes and proposed fixes: `reports/eval_error_analysis.md`.
+
+| | baseline (rules) | hybrid (router + LLM) |
+|---|---|---|
+| Safe automated resolution | 86.5% (90/104, 95% CI 78.7%–91.8%) | 88.5% (92/104, 95% CI 80.9%–93.3%) |
+| Containment | 72.6% (167/230, 95% CI 66.5%–78.0%) | 63.9% (147/230, 95% CI 57.5%–69.8%) |
+| Escalated when required | 81.1% (60/74, 95% CI 70.7%–88.4%) | 94.6% (70/74, 95% CI 86.9%–97.9%) |
+| Unnecessary transfers | 2.2% (3/138, 95% CI 0.7%–6.2%) | 4.3% (6/138, 95% CI 2.0%–9.2%) |
+| Unsafe outcomes | 0.0% (0/230, 95% CI 0.0%–1.6%) | 2.6% (6/230, 95% CI 1.2%–5.6%) |
+| Turn latency p50 / p95 | 2.4 / 13.0 ms | 1404.6 / 6762.0 ms |
+| Cost (230 cases) / per successful resolution | $0 | $0.029145 / $0.000317 |
+
+Hybrid repeated runs (63 cases × 3): 100% per-case outcome agreement. The 6 hybrid unsafe outcomes are disputes filed with a wrong reason that the scripted customer confirmed without reading (root cause A in the error analysis). Offline simulation on synthetic data — not a production measurement.
