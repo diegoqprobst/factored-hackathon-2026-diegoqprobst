@@ -1,0 +1,5 @@
+# SYNTHETIC POLICY — team assumptions for the hackathon prototype, not a real bank's rules.
+version: dispute_policy_v1
+window_days: 90                  # P1: older than this -> ineligible
+auto_limit_usd: 500              # P4: above this (or not convertible to USD) -> human
+human_review_dispute_count: 3    # P5: this many disputed transactions in one session -> human
