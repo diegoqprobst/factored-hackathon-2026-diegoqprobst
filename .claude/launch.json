@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "agent-baseline-demo",
+      "runtimeExecutable": "/opt/homebrew/bin/uv",
+      "runtimeArgs": ["run", "--env-file", ".env", "uvicorn", "--factory", "src.agent.api:create_app", "--port", "8010"],
+      "env": {"DEMO_MODE": "1", "AGENT_MODE": "baseline"},
+      "port": 8010
+    }
+  ]
+}

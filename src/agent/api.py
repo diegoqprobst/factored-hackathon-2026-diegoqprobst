@@ -79,7 +79,7 @@ def create_app(conn=None, agent=None, demo_mode: bool | None = None) -> FastAPI:
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     cache: dict = {}
 
-    @app.get("/")
+    @app.api_route("/", methods=["GET", "HEAD"])  # HEAD for uptime monitors and preview readiness probes
     def index():
         return FileResponse(STATIC_DIR / "index.html")
 

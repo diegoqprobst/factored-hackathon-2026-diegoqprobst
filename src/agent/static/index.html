@@ -1,1 +1,46 @@
-<!doctype html><title>Dispute agent</title><div id="chat"></div>
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LATAM Bank · Disputas</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>LATAM Bank · Asistente de disputas</h1>
+      <p class="sub">Escribe en español o português · datos sintéticos · demo</p>
+    </div>
+    <div id="badges" class="badges"></div>
+  </header>
+  <main class="layout">
+    <section class="chat-col">
+      <div id="chat" class="chat" aria-live="polite"></div>
+      <form id="composer" class="composer">
+        <input id="input" autocomplete="off" maxlength="2000" placeholder="Ej: No reconozco un cargo de 350 en Oxxo">
+        <button id="send" type="submit">Enviar</button>
+      </form>
+      <button id="new" class="link" type="button">Nueva conversación</button>
+    </section>
+    <aside class="side-col">
+      <section id="demo" class="panel" hidden>
+        <h2>Clientes de demo</h2>
+        <div id="scenarios"></div>
+      </section>
+      <section id="sms" class="panel" hidden>
+        <h2>SMS simulado <span class="tag">solo demo</span></h2>
+        <p id="sms-body" class="mono"></p>
+        <button id="sms-send" type="button">Enviar código</button>
+      </section>
+      <section class="panel">
+        <h2>Traza en vivo</h2>
+        <p class="hint">Lo que el sistema decidió en cada turno: router, extracción, herramientas, política, LLM.</p>
+        <div id="trace" class="trace"></div>
+      </section>
+    </aside>
+  </main>
+  <footer id="metrics" class="metrics"></footer>
+  <script src="/static/app.js"></script>
+</body>
+</html>

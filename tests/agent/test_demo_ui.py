@@ -19,6 +19,7 @@ def test_config_customers_and_static_routes(bank, frozen):
     assert any(x["scenario"] == "normal" for x in c.get("/v1/demo/customers").json())
     html = c.get("/")
     assert html.status_code == 200 and "text/html" in html.headers["content-type"] and 'id="chat"' in html.text
+    assert c.head("/").status_code == 200
 
 
 def test_demo_customers_hidden_outside_demo(bank, frozen):
