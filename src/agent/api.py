@@ -6,14 +6,20 @@ import threading
 import time
 import uuid
 from dataclasses import asdict
+from pathlib import Path
 
 import numpy as np
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from src.agent.demo import demo_scenarios
 from src.agent.factory import build_agent
 from src.agent.state import Conversation
 from src.bank import config, db
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 class ChatIn(BaseModel):
@@ -70,6 +76,26 @@ def create_app(conn=None, agent=None, demo_mode: bool | None = None) -> FastAPI:
     demo = demo_mode if demo_mode is not None else os.environ.get("DEMO_MODE") == "1"
     store = ConversationStore()
     app = FastAPI(title="LATAM Bank dispute agent", version="0.3.0")
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    cache: dict = {}
+
+    @app.get("/")
+    def index():
+        return FileResponse(STATIC_DIR / "index.html")
+
+    @app.get("/v1/config")
+    def app_config():
+        llm = getattr(agent.extractor, "llm", None)
+        return {"mode": agent.mode, "router": getattr(agent.router, "version", "unknown"),
+                "llm_model": getattr(llm, "model", None), "demo": demo}
+
+    @app.get("/v1/demo/customers")
+    def demo_customers():
+        if not demo:
+            raise HTTPException(404, "not available")
+        if "scenarios" not in cache:
+            cache["scenarios"] = demo_scenarios(conn)
+        return cache["scenarios"]
 
     @app.get("/health")
     def health():
