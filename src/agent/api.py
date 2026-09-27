@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from src.agent.demo import demo_scenarios
+from src.agent.demo import demo_pool, demo_scenarios
 from src.agent.factory import build_agent
 from src.agent.state import Conversation
 from src.bank import config, db
@@ -77,7 +77,17 @@ def create_app(conn=None, agent=None, demo_mode: bool | None = None) -> FastAPI:
     store = ConversationStore()
     app = FastAPI(title="LATAM Bank dispute agent", version="0.3.0")
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-    cache: dict = {}
+    pool: dict = {}
+    pool_ready = threading.Event()
+
+    def build_pool():
+        try:
+            pool.update(demo_pool(conn))
+        finally:
+            pool_ready.set()
+
+    if demo:  # the pool scans the whole sandbox (tens of seconds on a small instance): start it at boot
+        threading.Thread(target=build_pool, daemon=True, name="demo-pool").start()
 
     @app.api_route("/", methods=["GET", "HEAD"])  # HEAD for uptime monitors and preview readiness probes
     def index():
@@ -93,9 +103,9 @@ def create_app(conn=None, agent=None, demo_mode: bool | None = None) -> FastAPI:
     def demo_customers():
         if not demo:
             raise HTTPException(404, "not available")
-        if "scenarios" not in cache:
-            cache["scenarios"] = demo_scenarios(conn)
-        return cache["scenarios"]
+        if not pool_ready.wait(timeout=120):
+            raise HTTPException(503, "demo customers still loading")
+        return demo_scenarios(conn, pool)
 
     @app.get("/health")
     def health():

@@ -132,8 +132,21 @@ async function loadDemo() {
     $("badges").appendChild(b);
   }
   if (!cfg.demo) return;
-  const list = await api("/v1/demo/customers");
   $("demo").hidden = false;
+  await loadScenarios();
+}
+
+// Re-fetched on every new conversation: the server skips customers another visitor has already used.
+async function loadScenarios() {
+  let list;
+  try {
+    list = await api("/v1/demo/customers");
+  } catch {
+    $("scenarios").textContent = "Cargando clientes de demo…";
+    setTimeout(loadScenarios, 5000);
+    return;
+  }
+  $("scenarios").replaceChildren();
   for (const s of list) {
     const card = document.createElement("div");
     card.className = "scenario";
@@ -158,6 +171,6 @@ async function loadDemo() {
 }
 
 $("composer").addEventListener("submit", (ev) => { ev.preventDefault(); send(); });
-$("new").addEventListener("click", resetConversation);
+$("new").addEventListener("click", () => { resetConversation(); if (!$("demo").hidden) loadScenarios().catch(() => {}); });
 loadDemo().catch(() => {});
 refreshMetrics();
