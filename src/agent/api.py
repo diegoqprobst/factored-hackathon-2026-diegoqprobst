@@ -64,7 +64,9 @@ def create_app(conn=None, agent=None, demo_mode: bool | None = None) -> FastAPI:
     if conn is None:
         conn = db.connect(config.SANDBOX_PATH)
         db.create_schema(conn)
-    agent = agent or build_agent(conn, os.environ.get("AGENT_MODE", "hybrid"))
+    mode = os.environ.get("AGENT_MODE", "hybrid")
+    agent = agent or build_agent(conn, mode, llm_budget_usd=float(os.environ.get("AGENT_LLM_DAILY_BUDGET_USD", "0.5"))
+                                 if mode == "hybrid" else None)
     demo = demo_mode if demo_mode is not None else os.environ.get("DEMO_MODE") == "1"
     store = ConversationStore()
     app = FastAPI(title="LATAM Bank dispute agent", version="0.3.0")
