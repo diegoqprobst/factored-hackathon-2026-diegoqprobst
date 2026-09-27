@@ -23,3 +23,19 @@ def test_run_refuses_to_score_a_misconfigured_environment(monkeypatch):
     monkeypatch.delenv("BANK_SESSION_SECRET", raising=False)
     with pytest.raises(SystemExit, match="BANK_SESSION_SECRET"):
         eval_run.main(["run", "--systems", "baseline"])
+
+
+def test_build_with_seed_and_out_does_not_touch_the_sealed_set(tmp_path, monkeypatch):
+    from src.eval import run as eval_run
+    from src.eval.cases import Case, load_cases, verify_seal
+    seen = {}
+
+    def fake_build(conn, seed):
+        seen["seed"] = seed
+        return [Case("x-001", "human", "es", "Basic", "CLI-A", "111", "hola",
+                     expected={"outcome": "abstain", "writes": [], "reasons": [], "rules": [], "forbidden_text": []})]
+    monkeypatch.setattr(eval_run, "build_cases", fake_build)
+    monkeypatch.setattr(eval_run.db, "connect", lambda path: None)
+    out = tmp_path / "confirm" / "cases.jsonl"
+    eval_run.main(["build", "--seed", "2027", "--out", str(out)])
+    assert seen["seed"] == 2027 and verify_seal(out) and load_cases(out)[0].id == "x-001"
