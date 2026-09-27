@@ -1,4 +1,4 @@
-.PHONY: setup download pipeline test router-data router serve serve-demo serve-baseline eval-cases eval serve-demo-baseline
+.PHONY: setup download pipeline test router-data router serve serve-demo serve-baseline eval-cases eval serve-demo-baseline deploy
 
 setup:
 	uv sync
@@ -35,3 +35,6 @@ eval:
 
 serve-demo-baseline:
 	DEMO_MODE=1 AGENT_MODE=baseline uv run --env-file .env uvicorn --factory src.agent.api:create_app --port 8000
+
+deploy:
+	uv run --group embeddings --env-file .env python scripts/deploy_hf.py --user $(HF_USER)
