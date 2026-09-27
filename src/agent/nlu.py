@@ -191,8 +191,7 @@ SYSTEM_PROMPT = (
     "confirm (true if the customer clearly says yes, false if clearly no, else null), charges_count (number of "
     "distinct disputed charges mentioned, or null), wants_human (bool), wants_refund_or_credit (true only if the "
     "customer demands that the bank itself pay back, credit or compensate money now; a complaint that a merchant "
-    "refund has not arrived is false), card_lost_or_stolen (true if the customer says their card was lost or "
-    "stolen). Today is {today}; convert relative dates "
+    "refund has not arrived is false). Today is {today}; convert relative dates "
     "(ayer/ontem, la semana pasada) using today. Use null when the message does not say it.")
 
 
@@ -250,7 +249,6 @@ def validate_llm_fields(data: dict, today: date, n_options: int) -> dict:
         "charges_count": number(data.get("charges_count"), 1, 50, int),
         "wants_human": data.get("wants_human") is True,
         "wants_refund_or_credit": data.get("wants_refund_or_credit") is True,
-        "card_lost": data.get("card_lost_or_stolen") is True,
     }
 
 
@@ -277,7 +275,7 @@ class LLMExtractor:
             return Extraction(**{**asdict(base), "source": "llm_fallback"})
         merged = asdict(base)
         for name, value in llm_fields.items():
-            if name in ("wants_human", "wants_refund_or_credit", "card_lost"):
+            if name in ("wants_human", "wants_refund_or_credit"):
                 merged[name] = merged[name] or value
             elif name == "confirm":  # a write needs rules AND model to agree on yes; either "no" wins
                 merged[name] = (False if base.confirm is False or (base.confirm is None and value is False)

@@ -109,10 +109,9 @@ class Agent:
 
     # ---- stages ------------------------------------------------------------------------------------------------
     def _intake(self, conv, route, ext, tracer, tools):
-        intent = self._resolve_intent(route, ext)
+        intent, dispute_type = self._resolve(route, ext)
         if intent in DISPUTE_INTENTS or intent == "card_lost_stolen":
-            conv.intent = intent
-            conv.dispute_type = DISPUTE_TYPE_BY_INTENT.get(intent)
+            conv.intent, conv.dispute_type = intent, dispute_type
             conv.remember(ext)
             conv.stage = Stage.AUTH_DOC
             return "ask_document", {}
@@ -125,15 +124,19 @@ class Agent:
         return "out_of_scope", {"topic": intent}
 
     @staticmethod
-    def _resolve_intent(route, ext):
-        """The router decides *what kind* of request this is; the extractor, which read the details, decides the
-        dispute sub-type. A lost/stolen card always goes first: blocking it is the urgent, protective action."""
+    def _resolve(route, ext) -> tuple[str | None, str | None]:
+        """(intent, dispute sub-type). A card the customer explicitly says was lost/stolen goes first: blocking it is
+        the urgent, protective action. For disputes, a sub-type is kept only when router and extractor agree (or only
+        one of them has one); on disagreement it stays None and the customer is asked — never guessed."""
         intent = None if route.abstain else route.intent
         if ext.card_lost:
-            return "card_lost_stolen"
-        if ext.dispute_type and (intent is None or intent in DISPUTE_INTENTS):
-            return INTENT_BY_DISPUTE_TYPE[ext.dispute_type]
-        return intent
+            return "card_lost_stolen", None
+        router_type = DISPUTE_TYPE_BY_INTENT.get(intent) if intent in DISPUTE_INTENTS else None
+        if intent is None and ext.dispute_type:
+            return INTENT_BY_DISPUTE_TYPE[ext.dispute_type], ext.dispute_type
+        if router_type and ext.dispute_type and ext.dispute_type != router_type:
+            return intent, None
+        return intent, router_type or (ext.dispute_type if intent in DISPUTE_INTENTS else None)
 
     def _unclear(self, conv, tracer):
         conv.low_conf_count += 1
@@ -198,10 +201,8 @@ class Agent:
         if (route.intent == "card_lost_stolen" and not route.abstain) or ext.card_lost:
             conv.intent = "card_lost_stolen"
             return self._start_block_flow(conv, tracer, tools)
-        if ext.dispute_type:
-            conv.dispute_type = ext.dispute_type
-        elif route.intent in DISPUTE_INTENTS and not route.abstain:
-            conv.dispute_type = DISPUTE_TYPE_BY_INTENT[route.intent]
+        if conv.dispute_type is None:
+            conv.dispute_type = self._resolve(route, ext)[1]
         conv.remember(ext)
         if not conv.slots:
             return self._unclear(conv, tracer) if route.abstain and not ext.present_fields() else ("ask_charge", {})
@@ -362,10 +363,10 @@ class Agent:
         return "card_blocked", {"last4": stored.last4}
 
     def _done(self, conv, route, ext, tracer, tools):
-        intent = self._resolve_intent(route, ext)
+        intent, dispute_type = self._resolve(route, ext)
         if intent in DISPUTE_INTENTS or intent == "card_lost_stolen":
             conv.reset_case()
-            conv.intent, conv.dispute_type = intent, DISPUTE_TYPE_BY_INTENT.get(intent)
+            conv.intent, conv.dispute_type = intent, dispute_type
             conv.remember(ext)
             if not conv.token:
                 conv.stage = Stage.AUTH_DOC

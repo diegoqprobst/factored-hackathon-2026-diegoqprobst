@@ -6,6 +6,7 @@ from src.agent.state import Conversation, Stage
 from src.router.labels import RouterResult
 from tests.agent.test_llm_extractor import FakeLLM
 from tests.agent.test_orchestrator import auth, disputes
+from tests.helpers import last_code
 
 
 class FixedRouter:
@@ -18,13 +19,25 @@ class FixedRouter:
         return RouterResult(self.intent, 0.6, "pt", False, 0.0, False, "fixed")
 
 
-# A — the dispute sub-type comes from the extractor that read the sentence, not from the router
-def test_extractor_subtype_wins_over_router_subtype(bank, frozen):
+# A — when router and extractor disagree on the dispute sub-type, the customer is asked (v3 showed each is wrong
+# on different sub-types, so neither may guess)
+def test_subtype_disagreement_asks_the_customer(bank, frozen):
     agent = Agent(bank, FixedRouter("dispute_undue_fee"),
                   LLMExtractor(FakeLLM({"dispute_type": "amount_mismatch", "merchant": "Uber"})), mode="hybrid")
     c = Conversation("a1")
     agent.handle(c, "Na Uber cobraram 45 e o valor está errado")
-    assert (c.intent, c.dispute_type) == ("dispute_amount_mismatch", "amount_mismatch")
+    assert c.intent in ("dispute_undue_fee", "dispute_amount_mismatch") and c.dispute_type is None
+    agent.handle(c, "111")
+    agent.handle(c, last_code(bank))
+    assert c.stage is Stage.CLASSIFY and c.transaction_id == "TRX-A9"
+
+
+def test_subtype_agreement_is_used(bank, frozen):
+    agent = Agent(bank, FixedRouter("dispute_amount_mismatch"),
+                  LLMExtractor(FakeLLM({"dispute_type": "amount_mismatch"})), mode="hybrid")
+    c = Conversation("a3")
+    agent.handle(c, "Na Uber cobraram 45 e o valor está errado")
+    assert c.dispute_type == "amount_mismatch"
 
 
 def test_router_subtype_is_used_when_extractor_has_none(bank, frozen):
@@ -52,7 +65,9 @@ def test_explicit_refund_demand_still_escalates():
 def test_card_lost_signal_from_rules_and_llm():
     assert RuleExtractor().extract("Roubaram meu cartão e tem 3 compras que não fiz", Stage.INTAKE).card_lost is True
     assert RuleExtractor().extract("No reconozco un cargo de Uber", Stage.INTAKE).card_lost is False
-    assert LLMExtractor(FakeLLM({"card_lost_or_stolen": True})).extract("perdi o cartão", Stage.INTAKE).card_lost is True
+    # v3 showed the LLM reads "usaram meu cartão… não fui eu" as a stolen card: only explicit words count
+    assert LLMExtractor(FakeLLM({"card_lost_or_stolen": True})).extract(
+        "Usaram meu cartão na Uber, não fui eu", Stage.INTAKE).card_lost is False
 
 
 def test_stolen_card_with_charges_in_portuguese_blocks_then_hands_off(bank, frozen):
