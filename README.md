@@ -4,6 +4,21 @@ Customer-service system for LATAM Bank (synthetic) that takes in card/account tr
 Spanish and Portuguese, with a deterministic policy, permissions enforced in the service layer, and
 structured human handoff. Design: `docs/superpowers/specs/2026-09-26-dispute-agent-design.md`.
 
+## Live demo
+
+**https://latam-dispute-agent.onrender.com** — hybrid mode (TF-IDF router + `google/gemma-4-31b-it` extraction), demo mode on.
+
+- The side panel lists real sandbox customers, one per path: normal dispute, ambiguous charge, large amount
+  (human handoff), stolen card, and no registered phone. Buttons send the opening message in ES or PT and the
+  document number; the OTP appears in the "SMS simulado" panel (demo mode only).
+- The live trace shows, per turn, the route, the extracted fields, the tool calls, the policy rule and the LLM cost.
+- Each scenario rotates through 12 customers and skips one once it is used (open dispute, blocked card, or an OTP
+  requested in the current window), so several people can try it at once.
+- Free Render instance: it sleeps after 15 min idle and takes about a minute to wake. The sandbox database is
+  downloaded fresh from a private Hugging Face dataset on every start, so demo writes reset. The LLM spend is
+  capped per day (`AGENT_LLM_DAILY_BUDGET_USD`); past the cap the agent falls back to rules.
+- Deployed-config evaluation (same sealed confirmation cases): [`reports/eval_confirm_tfidf_fix/eval_report.md`](reports/eval_confirm_tfidf_fix/eval_report.md).
+
 ## Setup
 
 ```bash
