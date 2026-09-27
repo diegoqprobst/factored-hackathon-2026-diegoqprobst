@@ -135,4 +135,16 @@ def create_app(conn=None, agent=None, demo_mode: bool | None = None) -> FastAPI:
     def metrics():
         return metrics_summary(conn)
 
+    if os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("SLACK_BOT_TOKEN"):
+        from src.channels.bridge import ChannelBridge
+        bridge = ChannelBridge(agent, store, conn, demo)
+        if os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_WEBHOOK_SECRET"):
+            from src.channels.telegram import telegram_router
+            app.include_router(telegram_router(bridge, bot_token=os.environ["TELEGRAM_BOT_TOKEN"],
+                                               secret=os.environ["TELEGRAM_WEBHOOK_SECRET"]))
+        if os.environ.get("SLACK_BOT_TOKEN") and os.environ.get("SLACK_SIGNING_SECRET"):
+            from src.channels.slack import slack_router
+            app.include_router(slack_router(bridge, bot_token=os.environ["SLACK_BOT_TOKEN"],
+                                            signing_secret=os.environ["SLACK_SIGNING_SECRET"]))
+
     return app
