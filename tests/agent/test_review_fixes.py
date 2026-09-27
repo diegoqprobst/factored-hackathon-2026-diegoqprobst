@@ -224,3 +224,39 @@ def test_low_confidence_counter_resets(base, bank):
     r = auth(base, c, bank)
     assert r.stage == "identify"
     assert base.handle(c, "ehh zzz").stage == "identify"
+
+
+class _NoMeansDisputeRouter:
+    """Mimics the deployed TF-IDF router, which scores a bare "no" as dispute_unrecognized (0.81): its
+    training openings are full of "no reconozco…". A plain yes/no answer must still win over the route."""
+    version = "stub"
+
+    def __init__(self):
+        from src.router.keyword import KeywordRouter
+        self.inner = KeywordRouter()
+
+    def predict(self, text):
+        r = self.inner.predict(text)
+        if parse_confirm(text) is False:
+            return RouterResult("dispute_unrecognized", 0.81, r.language, False, 0.0, False, "stub")
+        return r
+
+
+@pytest.mark.parametrize("answer", ["no", "No.", "não"])
+def test_plain_no_at_block_offer_declines_even_if_router_sees_a_dispute(bank, frozen, answer):
+    agent = build_agent(bank, "baseline", router=_NoMeansDisputeRouter())
+    c = Conversation("n1")
+    agent.handle(c, "No reconozco un cargo de Uber")
+    auth(agent, c, bank)
+    agent.handle(c, "sí")
+    r = agent.handle(c, answer)
+    assert r.stage == "done" and card_status(bank) == "Active" and "un cargo a la vez" not in r.reply
+
+
+def test_plain_no_at_confirm_cancels_even_if_router_sees_a_dispute(bank, frozen):
+    agent = build_agent(bank, "baseline", router=_NoMeansDisputeRouter())
+    c = Conversation("n2")
+    agent.handle(c, "No reconozco un cargo de Uber")
+    auth(agent, c, bank)
+    r = agent.handle(c, "no")
+    assert r.stage == "done" and disputes(bank) == []

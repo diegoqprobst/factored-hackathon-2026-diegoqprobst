@@ -289,7 +289,7 @@ class Agent:
         return not route.abstain and (route.intent in DISPUTE_INTENTS or route.intent == "card_lost_stolen")
 
     def _confirm(self, conv, route, ext, tracer, tools):
-        if ext.confirm is not True and self._new_case(route):
+        if ext.confirm is None and self._new_case(route):  # a clear yes/no is an answer, whatever the route
             conv.charges_count = max(conv.charges_count or 0, len(conv.disputes) + 2)
             return "confirm_dispute", {"txn": conv.selected_view, "dispute_type": conv.dispute_type,
                                        "lead_key": "lead_one_at_a_time"}
@@ -337,7 +337,7 @@ class Agent:
 
     def _block_offer(self, conv, route, ext, tracer, tools):
         card = tools.call(conv.stage, "get_card", token=conv.token, product_id=conv.product_id)
-        if ext.confirm is not True and self._new_case(route):
+        if ext.confirm is None and self._new_case(route):  # a clear yes/no is an answer, whatever the route
             conv.charges_count = max(conv.charges_count or 0, len(conv.disputes) + 1)
             return "offer_block", {"last4": card.last4, "lead_key": "lead_one_at_a_time"}
         if ext.confirm is None:
