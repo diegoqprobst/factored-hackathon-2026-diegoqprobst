@@ -8,7 +8,7 @@ from src.agent.llm import parse_json_object
 from src.agent.state import Stage
 from src.bank import config
 from src.bank.policy import DISPUTE_TYPES
-from src.router.keyword import KeywordRouter
+from src.router.keyword import KeywordRouter, intent_hits
 from src.router.labels import DISPUTE_TYPE_BY_INTENT, normalize
 
 TYPE_BY_NUMBER = {1: "unrecognized", 2: "duplicate", 3: "amount_mismatch", 4: "undue_fee", 5: "refund_not_received"}
@@ -48,6 +48,7 @@ class Extraction:
     charges_count: int | None = None
     wants_human: bool = False
     wants_refund_or_credit: bool = False
+    card_lost: bool = False
     source: str = "rules"
 
     def present_fields(self) -> list[str]:
@@ -177,7 +178,8 @@ class RuleExtractor:
             confirm=parse_confirm(text) if stage in (Stage.CONFIRM, Stage.BLOCK_OFFER) else None,
             charges_count=parse_charges_count(text),
             wants_human=route.intent == "human_request" and not route.abstain,
-            wants_refund_or_credit=bool(REFUND_OR_CREDIT.search(normalize(text))))
+            wants_refund_or_credit=bool(REFUND_OR_CREDIT.search(normalize(text))),
+            card_lost=intent_hits(text)["card_lost_stolen"] > 0)
 
 
 SYSTEM_PROMPT = (
@@ -188,7 +190,9 @@ SYSTEM_PROMPT = (
     "amount_mismatch, undue_fee, refund_not_received, or null), choice (integer option number|null), "
     "confirm (true if the customer clearly says yes, false if clearly no, else null), charges_count (number of "
     "distinct disputed charges mentioned, or null), wants_human (bool), wants_refund_or_credit (true only if the "
-    "customer asks the bank to refund, credit or compensate money now). Today is {today}; convert relative dates "
+    "customer demands that the bank itself pay back, credit or compensate money now; a complaint that a merchant "
+    "refund has not arrived is false), card_lost_or_stolen (true if the customer says their card was lost or "
+    "stolen). Today is {today}; convert relative dates "
     "(ayer/ontem, la semana pasada) using today. Use null when the message does not say it.")
 
 
@@ -246,6 +250,7 @@ def validate_llm_fields(data: dict, today: date, n_options: int) -> dict:
         "charges_count": number(data.get("charges_count"), 1, 50, int),
         "wants_human": data.get("wants_human") is True,
         "wants_refund_or_credit": data.get("wants_refund_or_credit") is True,
+        "card_lost": data.get("card_lost_or_stolen") is True,
     }
 
 
@@ -272,12 +277,15 @@ class LLMExtractor:
             return Extraction(**{**asdict(base), "source": "llm_fallback"})
         merged = asdict(base)
         for name, value in llm_fields.items():
-            if name in ("wants_human", "wants_refund_or_credit"):
+            if name in ("wants_human", "wants_refund_or_credit", "card_lost"):
                 merged[name] = merged[name] or value
             elif name == "confirm":  # a write needs rules AND model to agree on yes; either "no" wins
                 merged[name] = (False if base.confirm is False or (base.confirm is None and value is False)
                                 else True if base.confirm is True and value is True else None)
             elif value is not None:
                 merged[name] = value
+        if merged["dispute_type"] == "refund_not_received":
+            # "my refund never arrived" is the dispute itself; only an explicit demand (rules) escalates
+            merged["wants_refund_or_credit"] = base.wants_refund_or_credit
         merged["source"] = "llm"
         return Extraction(**merged)

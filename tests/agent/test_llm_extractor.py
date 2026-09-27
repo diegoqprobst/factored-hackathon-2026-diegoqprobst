@@ -57,7 +57,7 @@ def test_invalid_fields_are_dropped():  # Review Focus 3
                               TODAY, n_options=3)
     assert out == {"amount": None, "date_from": None, "date_to": None, "merchant": None, "dispute_type": None,
                    "choice": None, "confirm": None, "charges_count": None, "wants_human": False,
-                   "wants_refund_or_credit": True}
+                   "wants_refund_or_credit": True, "card_lost": False}
 
 
 def test_single_date_fills_both_ends():
