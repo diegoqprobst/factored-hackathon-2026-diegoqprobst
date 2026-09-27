@@ -17,7 +17,7 @@ def build_agent(conn, mode: str = "hybrid", *, router=None, llm=None, faults: di
         raise ValueError(f"unknown mode {mode!r}")
     if router is None:
         from src.router.classifier import load_router
-        router = load_router()
+        router = load_router(os.environ.get("ROUTER_PATH", "models/router_v1"))
     llm = llm or OpenRouterLLM(os.environ.get("AGENT_LLM_MODEL", DEFAULT_MODEL))
     if llm_budget_usd is not None:
         from src.agent.budget import BudgetedLLM

@@ -1,0 +1,89 @@
+{
+  "model": "tfidf",
+  "version": "tfidf_v1",
+  "threshold": 0.6154946876667161,
+  "purpose": "torch-free fallback for small deployments (not the pre-registered selection)",
+  "dataset_hash": "d0fa40d9fae26fa1c29d783c1970f8d79dd3abf5b1c0ad9217c42e0fb120a84e",
+  "decontaminated": 6,
+  "n_train": 828,
+  "n_val": 260,
+  "n_test": 159,
+  "val": {
+    "n": 260,
+    "macro_f1": 0.803345226422816,
+    "accuracy": 0.8038461538461539,
+    "per_class_f1": {
+      "dispute_unrecognized": 0.7659574468085106,
+      "dispute_duplicate": 0.9166666666666666,
+      "dispute_amount_mismatch": 0.7796610169491526,
+      "dispute_undue_fee": 0.8979591836734694,
+      "dispute_refund_not_received": 0.9393939393939394,
+      "card_lost_stolen": 0.9090909090909091,
+      "human_request": 0.8648648648648649,
+      "oos_balance_movements": 0.8,
+      "oos_credit": 0.6060606060606061,
+      "oos_other": 0.5,
+      "greeting_smalltalk": 0.8571428571428571
+    },
+    "per_language_macro_f1": {
+      "es": 0.8602820181767549,
+      "pt": 0.741204727505037
+    },
+    "n_by_language": {
+      "es": 125,
+      "pt": 135
+    },
+    "coverage": 0.38461538461538464,
+    "selective_accuracy": 0.95,
+    "ece": 0.27160968588884526,
+    "language_accuracy": 0.9846153846153847,
+    "injection": {
+      "precision": 1.0,
+      "recall": 0.65,
+      "f1": 0.7878787878787878
+    },
+    "threshold": 0.6154946876667161,
+    "latency_ms_p50": 1.0383334592916071,
+    "latency_ms_p95": 1.8283435085322703
+  },
+  "test": {
+    "n": 159,
+    "macro_f1": 0.8863198141057379,
+    "accuracy": 0.8867924528301887,
+    "per_class_f1": {
+      "dispute_unrecognized": 0.875,
+      "dispute_duplicate": 0.9032258064516129,
+      "dispute_amount_mismatch": 0.8181818181818182,
+      "dispute_undue_fee": 0.8387096774193549,
+      "dispute_refund_not_received": 0.9285714285714286,
+      "card_lost_stolen": 0.8387096774193549,
+      "human_request": 1.0,
+      "oos_balance_movements": 0.8571428571428571,
+      "oos_credit": 0.8181818181818182,
+      "oos_other": 0.8717948717948718,
+      "greeting_smalltalk": 1.0
+    },
+    "per_language_macro_f1": {
+      "es": 0.8724649088285452,
+      "pt": 0.9010590568077201
+    },
+    "n_by_language": {
+      "es": 80,
+      "pt": 79
+    },
+    "coverage": 0.5786163522012578,
+    "selective_accuracy": 1.0,
+    "ece": 0.23925542285423856,
+    "language_accuracy": 1.0,
+    "injection": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0
+    },
+    "threshold": 0.6154946876667161,
+    "latency_ms_p50": 1.0439580073580146,
+    "latency_ms_p95": 1.7184589058160782
+  },
+  "git_sha": "103ae1f19ed586444d54f396cb00105935a6f1b5",
+  "created_at": "2026-09-27T22:08:16.448293+00:00"
+}
