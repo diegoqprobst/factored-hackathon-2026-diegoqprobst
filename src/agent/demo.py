@@ -4,6 +4,7 @@ from src.bank import db
 ACTIVE = ("u.customer_status = 'Active' and u.mobile_phone is not null and u.customer_id not in "
           "(select customer_id from complaint_flags where is_repeat_complainer = 1)")
 CARD = "p.product_type like 'Tarjeta%' and p.product_status = 'Active'"
+KIND = {"Withdrawal": ("retiro", "saque"), "Transfer": ("transferencia", "transferência"), "Payment": ("pago", "pagamento")}
 USD = "coalesce(t.amount_usd, case when t.currency = 'USD' then t.amount end)"
 
 
@@ -36,15 +37,17 @@ def demo_scenarios(conn) -> list[dict]:
             out.append({"scenario": "ambiguous", "document": r["d"],
                         "message_es": f"No reconozco un cargo en {r['m']}",
                         "message_pt": f"Não reconheço uma cobrança na {r['m']}"})
-        r = q(f"""select u.document_number d, t.amount a from transactions t
+        r = q(f"""select u.document_number d, t.amount a, t.transaction_type k from transactions t
                   join products p on p.product_id = t.product_id join customers u on u.customer_id = t.customer_id
                   where {ACTIVE} and {CARD} and t.transaction_status = 'Approved' and t.merchant_name is null
-                    and t.local_date >= '2026-04-01' and {USD} > 600 and t.transaction_type = 'Withdrawal'
+                    and t.local_date >= '2026-04-01' and {USD} > 600
+                    and t.transaction_type in ('Withdrawal', 'Transfer', 'Payment')
                   order by u.customer_id limit 1""")
         if r:
+            es, pt = KIND[r["k"]]
             out.append({"scenario": "large_amount", "document": r["d"],
-                        "message_es": f"No reconozco un retiro de {_amount(r['a'], 'es')} en mi tarjeta",
-                        "message_pt": f"Não reconheço um saque de {_amount(r['a'], 'pt')} no meu cartão"})
+                        "message_es": f"No reconozco un {es} de {_amount(r['a'], 'es')} en mi tarjeta",
+                        "message_pt": f"Não reconheço um {pt} de {_amount(r['a'], 'pt')} no meu cartão"})
         r = q(f"""select u.document_number d from customers u join products p on p.customer_id = u.customer_id
                   where {ACTIVE} and {CARD} group by u.customer_id having count(*) = 1
                   order by u.customer_id limit 1""")
