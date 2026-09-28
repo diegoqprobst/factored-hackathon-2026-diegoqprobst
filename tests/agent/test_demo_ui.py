@@ -84,3 +84,14 @@ def test_page_has_the_guided_flow_elements(bank, frozen):
         assert element in html
     js = c.get("/static/app.js").text
     assert "startScenario" in js and "renderNext" in js
+
+
+def test_ui_assets_are_cache_busted(bank, frozen):  # seen live: a returning browser kept the old app.js
+    import re
+    c = TestClient(create_app(conn=bank, agent=build_agent(bank, "baseline"), demo_mode=True))
+    r = c.get("/")
+    assert "no-cache" in r.headers.get("cache-control", "")
+    js = re.search(r'/static/app\.js\?v=([0-9a-f]{8,})"', r.text)
+    css = re.search(r'/static/styles\.css\?v=([0-9a-f]{8,})"', r.text)
+    assert js and css
+    assert c.head("/").status_code == 200

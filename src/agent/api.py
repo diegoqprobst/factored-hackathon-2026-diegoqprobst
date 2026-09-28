@@ -1,5 +1,6 @@
 """HTTP API for the dispute agent. Run: uv run --group embeddings --env-file .env uvicorn --factory src.agent.api:create_app
 Single process, in-memory conversation store with TTL (a declared capacity limit)."""
+import hashlib
 import json
 import os
 import threading
@@ -11,7 +12,7 @@ from pathlib import Path
 
 import numpy as np
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -106,9 +107,16 @@ def create_app(conn=None, agent=None, demo_mode: bool | None = None) -> FastAPI:
     if demo:  # the pool scans the whole sandbox (tens of seconds on a small instance): start it at boot
         threading.Thread(target=build_pool, daemon=True, name="demo-pool").start()
 
+    # Asset URLs carry a content hash and the page itself is never cached, so a returning browser always gets the
+    # current UI (seen live: a cached app.js kept the old buttons after a deploy).
+    assets = {name: hashlib.sha256((STATIC_DIR / name).read_bytes()).hexdigest()[:12] for name in ("app.js", "styles.css")}
+    page = (STATIC_DIR / "index.html").read_text()
+    for name, digest in assets.items():
+        page = page.replace(f'"/static/{name}"', f'"/static/{name}?v={digest}"')
+
     @app.api_route("/", methods=["GET", "HEAD"])  # HEAD for uptime monitors and preview readiness probes
     def index():
-        return FileResponse(STATIC_DIR / "index.html")
+        return HTMLResponse(page, headers={"Cache-Control": "no-cache"})
 
     @app.get("/v1/config")
     def app_config():
