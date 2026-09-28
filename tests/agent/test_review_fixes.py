@@ -283,3 +283,17 @@ def test_yes_with_the_action_verb_is_a_yes(text):
 @pytest.mark.parametrize("text", ["no la bloquees", "não bloqueia", "¿la bloqueo?", "bloquéala si vuelve a pasar"])
 def test_action_verb_does_not_turn_a_no_or_a_condition_into_a_yes(text):
     assert parse_confirm(text) is not True
+
+
+@pytest.mark.parametrize("text", [  # seen live: an amount pasted at the OTP step burned attempts
+    "No reconozco un cargo de 451998.09 en Laboratorio Central", "fueron 123456,50 pesos", "1.451998",
+])
+def test_decimal_amount_is_never_an_otp(text):
+    from src.agent.nlu import parse_otp
+    assert parse_otp(text) is None
+
+
+@pytest.mark.parametrize("text, code", [("123456", "123456"), ("mi código es 123 456", "123456"), ("123456.", "123456")])
+def test_plain_otp_still_parses(text, code):
+    from src.agent.nlu import parse_otp
+    assert parse_otp(text) == code

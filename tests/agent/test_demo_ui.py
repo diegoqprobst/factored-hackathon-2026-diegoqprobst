@@ -75,3 +75,12 @@ def test_demo_customers_endpoint_reflects_new_disputes(bank, frozen):
     after = {x["scenario"]: x for x in c.get("/v1/demo/customers").json()}["normal"]
     assert "Cabify" in before["message_es"] and "Uber" in after["message_es"]
     assert set(after) == {"scenario", "document", "message_es", "message_pt"}  # no internal ids leak
+
+
+def test_page_has_the_guided_flow_elements(bank, frozen):
+    c = TestClient(create_app(conn=bank, agent=build_agent(bank, "baseline"), demo_mode=True))
+    html = c.get("/").text
+    for element in ('id="steps"', 'id="next"', 'id="active"', 'id="sms"', 'id="welcome"'):
+        assert element in html
+    js = c.get("/static/app.js").text
+    assert "startScenario" in js and "renderNext" in js

@@ -123,7 +123,8 @@ def parse_document(text: str) -> str | None:
 
 
 def parse_otp(text: str) -> str | None:
-    m = re.search(r"(?<!\d)(\d{3})\s?(\d{3})(?!\d)", text or "")
+    # Not part of a decimal amount ("451998.09", "1.451998"): pasting an amount must not burn an OTP attempt.
+    m = re.search(r"(?<!\d)(?<!\d[.,])(\d{3})\s?(\d{3})(?!\d|[.,]\d)", text or "")
     return m.group(1) + m.group(2) if m else None
 
 

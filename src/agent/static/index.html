@@ -16,7 +16,33 @@
   </header>
   <main class="layout">
     <section class="chat-col">
-      <div id="chat" class="chat" aria-live="polite"></div>
+      <div id="active" class="active" hidden>
+        <span id="active-label"></span>
+        <button id="active-exit" class="link" type="button">Salir del escenario</button>
+      </div>
+      <ol id="steps" class="steps" aria-label="Progreso de la conversación">
+        <li data-step="intake">Motivo</li>
+        <li data-step="auth_doc">Documento</li>
+        <li data-step="auth_otp">Código SMS</li>
+        <li data-step="identify">Cargo</li>
+        <li data-step="confirm">Confirmar</li>
+        <li data-step="done">Resultado</li>
+      </ol>
+      <div id="chat" class="chat" aria-live="polite">
+        <div id="welcome" class="welcome">
+          <strong>¿Cómo probarlo?</strong>
+          <span>Elige un escenario a la derecha con <b>▶ Probar</b>, o escribe tu propio caso aquí abajo.
+            Después sigue los botones de <b>siguiente paso</b> que aparecen bajo la caja de texto.</span>
+        </div>
+      </div>
+      <div id="sms" class="sms" hidden>
+        <div class="sms-icon" aria-hidden="true">✉</div>
+        <div class="sms-text">
+          <span class="tag">SMS simulado · solo demo</span>
+          <p id="sms-body" class="mono"></p>
+        </div>
+      </div>
+      <div id="next" class="next" aria-label="Siguiente paso"></div>
       <form id="composer" class="composer">
         <input id="input" autocomplete="off" maxlength="2000" placeholder="Ej: No reconozco un cargo de 350 en Oxxo">
         <button id="send" type="submit">Enviar</button>
@@ -25,13 +51,9 @@
     </section>
     <aside class="side-col">
       <section id="demo" class="panel" hidden>
-        <h2>Clientes de demo</h2>
+        <h2>Escenarios de demo</h2>
+        <p class="hint">Clientes reales del sandbox. Cada escenario empieza una conversación nueva.</p>
         <div id="scenarios"></div>
-      </section>
-      <section id="sms" class="panel" hidden>
-        <h2>SMS simulado <span class="tag">solo demo</span></h2>
-        <p id="sms-body" class="mono"></p>
-        <button id="sms-send" type="button">Enviar código</button>
       </section>
       <section class="panel">
         <h2>Traza en vivo</h2>

@@ -8,9 +8,10 @@ structured human handoff. Design: `docs/superpowers/specs/2026-09-26-dispute-age
 
 **https://latam-dispute-agent.onrender.com** — hybrid mode (TF-IDF router + `google/gemma-4-31b-it` extraction), demo mode on.
 
-- The side panel lists real sandbox customers, one per path: normal dispute, ambiguous charge, large amount
-  (human handoff), stolen card, and no registered phone. Buttons send the opening message in ES or PT and the
-  document number; the OTP appears in the "SMS simulado" panel (demo mode only).
+- Guided demo: the side panel lists real sandbox customers, one per path (normal dispute, ambiguous charge,
+  large amount → human, stolen card, no registered phone). "▶ Probar (ES/PT)" starts a fresh conversation; a
+  progress bar follows the agent's real stage, and "next step" buttons under the input offer the document, the OTP
+  from the simulated SMS (demo mode only), a wrong code, the matching charges, and yes/no. Free text always works.
 - The live trace shows, per turn, the route, the extracted fields, the tool calls, the policy rule and the LLM cost.
 - Each scenario rotates through 12 customers and skips one once it is used (open dispute, blocked card, or an OTP
   requested in the current window), so several people can try it at once.
