@@ -270,3 +270,16 @@ def test_model_only_no_does_not_swallow_a_new_charge_at_confirm(bank, frozen):  
     auth(agent, c, bank)
     r = agent.handle(c, "No, el que no reconozco es otro de 80 en Oxxo")
     assert r.stage == "confirm" and "un cargo a la vez" in r.reply and disputes(bank) == []
+
+
+@pytest.mark.parametrize("text", [  # seen in the live demo: an explicit action verb is a clear yes
+    "sim, bloqueia", "Sim, bloqueie", "sí, bloquéala", "sí bloquéala por favor", "bloquéala", "dale, ábrela",
+    "sim, pode abrir", "sí, ábrela",
+])
+def test_yes_with_the_action_verb_is_a_yes(text):
+    assert parse_confirm(text) is True
+
+
+@pytest.mark.parametrize("text", ["no la bloquees", "não bloqueia", "¿la bloqueo?", "bloquéala si vuelve a pasar"])
+def test_action_verb_does_not_turn_a_no_or_a_condition_into_a_yes(text):
+    assert parse_confirm(text) is not True

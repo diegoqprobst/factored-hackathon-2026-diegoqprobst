@@ -13,12 +13,15 @@ from src.router.labels import DISPUTE_TYPE_BY_INTENT, normalize
 
 TYPE_BY_NUMBER = {1: "unrecognized", 2: "duplicate", 3: "amount_mismatch", 4: "undue_fee", 5: "refund_not_received"}
 YES = {"si", "s", "dale", "ok", "okay", "confirmo", "confirmar", "correcto", "claro", "afirmativo", "sim", "isso",
-       "pode", "exato", "yes", "listo", "perfecto", "bora", "confirma", "hazlo", "adelante", "certo", "vale"}
+       "pode", "exato", "yes", "listo", "perfecto", "bora", "confirma", "hazlo", "adelante", "certo", "vale",
+       # the action itself, as an imperative ("sim, bloqueia", "sí, ábrela"); the infinitive only after "pode"
+       "bloquea", "bloqueala", "bloquee", "bloqueela", "bloqueia", "bloqueie", "bloqueiem", "abre", "abrela",
+       "abra", "abrala", "abri", "abrir"}
 NO = {"no", "nao", "cancela", "cancelar", "negativo", "nop", "nope", "jamas", "nunca"}
 # Words allowed around a yes/no without changing its meaning. Anything else (a question, a condition, a new
 # request) makes the answer "unclear" and the agent asks again: a write needs an unambiguous yes.
 FILLER = {"por", "favor", "gracias", "obrigado", "obrigada", "porfa", "please", "pls", "ya", "va", "bueno", "pues",
-          "entonces", "senor", "senora", "de", "acuerdo", "mesmo", "mejor", "eso", "esa"}
+          "entonces", "senor", "senora", "de", "acuerdo", "mesmo", "mejor", "eso", "esa", "la", "lo", "ela"}
 ORDINALS = {"primero": 1, "primera": 1, "primeiro": 1, "segundo": 2, "segunda": 2, "tercero": 3, "tercera": 3,
             "terceiro": 3, "cuarto": 4, "quarto": 4, "quinto": 5, "ultimo": -1, "ultima": -1}
 WORD_NUMBERS = {"dos": 2, "dois": 2, "duas": 2, "tres": 3, "cuatro": 4, "quatro": 4, "cinco": 5, "varios": 3,

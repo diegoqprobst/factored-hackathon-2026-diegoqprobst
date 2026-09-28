@@ -138,15 +138,17 @@ async function loadDemo() {
 
 // Re-fetched on every new conversation: the server skips customers another visitor has already used.
 async function loadScenarios() {
+  if (!$("scenarios").children.length) $("scenarios").textContent = "Cargando clientes de demo…";
   let list;
   try {
     list = await api("/v1/demo/customers");
   } catch {
-    $("scenarios").textContent = "Cargando clientes de demo…";
+    $("scenarios").textContent = "Cargando clientes de demo… (el servidor acaba de despertar, tarda ~1 min)";
     setTimeout(loadScenarios, 5000);
     return;
   }
   $("scenarios").replaceChildren();
+  if (!list.length) $("scenarios").textContent = "No hay clientes de demo disponibles ahora; usa «Nueva conversación» más tarde.";
   for (const s of list) {
     const card = document.createElement("div");
     card.className = "scenario";

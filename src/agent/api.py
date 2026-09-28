@@ -78,8 +78,8 @@ def metrics_summary(conn) -> dict:
     total = round(sum(r["cost_usd"] for r in rows), 6)
     return {"turns": len(rows), "conversations": conversations, "handoffs": handoffs,
             "escalation_rate": handoffs / conversations if conversations else None,
-            "latency_ms_p50": float(np.percentile(latencies, 50)) if latencies else None,
-            "latency_ms_p95": float(np.percentile(latencies, 95)) if latencies else None,
+            "latency_ms_p50": round(float(np.percentile(latencies, 50)), 1) if latencies else None,
+            "latency_ms_p95": round(float(np.percentile(latencies, 95)), 1) if latencies else None,
             "cost_usd_total": total, "cost_usd_per_conversation": total / conversations if conversations else None}
 
 
@@ -120,7 +120,7 @@ def create_app(conn=None, agent=None, demo_mode: bool | None = None) -> FastAPI:
     def demo_customers():
         if not demo:
             raise HTTPException(404, "not available")
-        if not pool_ready.wait(timeout=120):
+        if not pool_ready.wait(timeout=2):  # never park a worker thread: the UI retries every few seconds
             raise HTTPException(503, "demo customers still loading")
         return demo_scenarios(conn, pool)
 
