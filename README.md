@@ -17,7 +17,7 @@ structured human handoff. Design: `docs/superpowers/specs/2026-09-26-dispute-age
 - Free Render instance: it sleeps after 15 min idle and takes about a minute to wake. The sandbox database is
   downloaded fresh from a private Hugging Face dataset on every start, so demo writes reset. The LLM spend is
   capped per day (`AGENT_LLM_DAILY_BUDGET_USD`); past the cap the agent falls back to rules.
-- Deployed-config evaluation (same sealed confirmation cases): [`reports/eval_confirm_tfidf_fix/eval_report.md`](reports/eval_confirm_tfidf_fix/eval_report.md).
+- Deployed-config evaluation (same sealed confirmation cases): [`reports/eval_confirm_tfidf_final/eval_report.md`](reports/eval_confirm_tfidf_final/eval_report.md).
 
 ## Setup
 
