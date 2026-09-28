@@ -76,3 +76,17 @@ Re-run on the same sealed confirmation cases (230), agent otherwise unchanged:
 - Hybrid LLM spend for the run: $0.028.
 
 Lesson: add a turn-efficiency metric (turns vs. the scripted minimum) so a wasted turn is visible in the report.
+
+## Final run after the review fixes and demo polish — `reports/eval_confirm_tfidf_final/`
+
+Changes since the previous run: model-only "no" no longer swallows a new charge (review Important 4) and the
+imperative of the action ("sim, bloqueia") counts as a yes. Neither can alter the scripted customer's answers:
+it only ever answers "sí" / "sim" / "não", which were already in the strict sets, and `parse_confirm` runs only at
+the confirm and block-offer stages. The deterministic baseline reproduced exactly.
+
+- Hybrid SAR 102/104 = 98.1% (previous run 103/104), escalation recall 74/74, unsafe 1/230 (same case class:
+  `unexpected_write`), unnecessary transfers 1/138.
+- The one flip, `vague-010` (PT), failed at the identify stage — before any confirmation — with a
+  `charge_not_found` handoff after "foi na Mercado Central, 924351,39": LLM run-to-run variance on amount/merchant
+  extraction, not the change. It is a safe failure (handoff, no write).
+- Take-away for the slides: report the hybrid as a range across runs (SAR 98.1–99.0% on this set), not a point.
