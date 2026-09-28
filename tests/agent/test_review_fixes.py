@@ -260,3 +260,13 @@ def test_plain_no_at_confirm_cancels_even_if_router_sees_a_dispute(bank, frozen)
     auth(agent, c, bank)
     r = agent.handle(c, "no")
     assert r.stage == "done" and disputes(bank) == []
+
+
+def test_model_only_no_does_not_swallow_a_new_charge_at_confirm(bank, frozen):  # Final review Important 4
+    from src.agent.nlu import LLMExtractor
+    agent = Agent(bank, _NoMeansDisputeRouter(), LLMExtractor(FakeLLM({"confirm": False})), mode="hybrid")
+    c = Conversation("n3")
+    agent.handle(c, "No reconozco un cargo de Uber")
+    auth(agent, c, bank)
+    r = agent.handle(c, "No, el que no reconozco es otro de 80 en Oxxo")
+    assert r.stage == "confirm" and "un cargo a la vez" in r.reply and disputes(bank) == []

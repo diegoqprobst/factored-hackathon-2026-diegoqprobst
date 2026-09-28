@@ -60,3 +60,16 @@ def test_metrics(client):
     m = client.get("/v1/metrics").json()
     assert (m["turns"], m["conversations"], m["handoffs"], m["escalation_rate"]) == (1, 1, 1, 1.0)
     assert m["latency_ms_p95"] >= m["latency_ms_p50"] >= 0 and m["cost_usd_total"] == 0.0
+
+
+def test_conversation_store_evicts_expired_and_caps_size():  # Final review Important 1
+    import time as _time
+    from src.agent.api import ConversationStore
+    s = ConversationStore(ttl_seconds=0.05, max_items=3)
+    old = s.create()
+    s.lock(old.id)
+    _time.sleep(0.06)
+    ids = [s.create().id for _ in range(5)]
+    assert len(s._items) <= 3 and len(s._locks) <= 3
+    assert old.id not in s._items and old.id not in s._locks
+    assert s.get(ids[-1]) is not None  # the newest survive

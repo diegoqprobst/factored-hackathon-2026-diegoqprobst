@@ -45,6 +45,7 @@ class Extraction:
     dispute_type: str | None = None
     choice: int | None = None
     confirm: bool | None = None
+    confirm_rules: bool | None = None  # the strict parser alone; `confirm` may also carry the model's "no"
     charges_count: int | None = None
     wants_human: bool = False
     wants_refund_or_credit: bool = False
@@ -52,7 +53,7 @@ class Extraction:
     source: str = "rules"
 
     def present_fields(self) -> list[str]:
-        return [f.name for f in fields(self) if f.name != "source" and getattr(self, f.name) not in (None, False)]
+        return [f.name for f in fields(self) if f.name not in ("source", "confirm_rules") and getattr(self, f.name) not in (None, False)]
 
 
 def parse_amount(text: str) -> float | None:
@@ -176,6 +177,7 @@ class RuleExtractor:
             amount=None if stage in (Stage.CONFIRM, Stage.BLOCK_OFFER, Stage.CLASSIFY) else parse_amount(text),
             date_from=date_from, date_to=date_to, merchant=_merchant(text), dispute_type=dispute_type, choice=choice,
             confirm=parse_confirm(text) if stage in (Stage.CONFIRM, Stage.BLOCK_OFFER) else None,
+            confirm_rules=parse_confirm(text) if stage in (Stage.CONFIRM, Stage.BLOCK_OFFER) else None,
             charges_count=parse_charges_count(text),
             wants_human=route.intent == "human_request" and not route.abstain,
             wants_refund_or_credit=bool(REFUND_OR_CREDIT.search(normalize(text))),

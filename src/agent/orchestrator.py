@@ -285,11 +285,16 @@ class Agent:
         conv.stage = Stage.DONE
         return "ineligible", {"rule": decision.rule_id, "existing": decision.existing_dispute_id or ""}
 
+    def _new_charge(self, ext, route) -> bool:
+        # A plain yes/no (strict rules parser) is an answer whatever the route; a model-only "no" is not enough
+        # to swallow a message that opens a new charge ("no, el que no reconozco es otro de 80 en Oxxo").
+        return ext.confirm is not True and ext.confirm_rules is not False and self._new_case(route)
+
     def _new_case(self, route) -> bool:
         return not route.abstain and (route.intent in DISPUTE_INTENTS or route.intent == "card_lost_stolen")
 
     def _confirm(self, conv, route, ext, tracer, tools):
-        if ext.confirm is None and self._new_case(route):  # a clear yes/no is an answer, whatever the route
+        if self._new_charge(ext, route):
             conv.charges_count = max(conv.charges_count or 0, len(conv.disputes) + 2)
             return "confirm_dispute", {"txn": conv.selected_view, "dispute_type": conv.dispute_type,
                                        "lead_key": "lead_one_at_a_time"}
@@ -337,7 +342,7 @@ class Agent:
 
     def _block_offer(self, conv, route, ext, tracer, tools):
         card = tools.call(conv.stage, "get_card", token=conv.token, product_id=conv.product_id)
-        if ext.confirm is None and self._new_case(route):  # a clear yes/no is an answer, whatever the route
+        if self._new_charge(ext, route):
             conv.charges_count = max(conv.charges_count or 0, len(conv.disputes) + 1)
             return "offer_block", {"last4": card.last4, "lead_key": "lead_one_at_a_time"}
         if ext.confirm is None:

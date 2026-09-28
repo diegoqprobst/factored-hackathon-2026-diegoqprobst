@@ -5,6 +5,7 @@ import os
 import threading
 import time
 import uuid
+from collections import OrderedDict
 from dataclasses import asdict
 from pathlib import Path
 
@@ -28,13 +29,28 @@ class ChatIn(BaseModel):
 
 
 class ConversationStore:
-    def __init__(self, ttl_seconds: int = 1800):
-        self.ttl, self._items, self._locks, self._guard = ttl_seconds, {}, {}, threading.Lock()
+    """Public instance: every POST /v1/chat without an id creates an entry, so expired entries are swept on
+    create and the store is capped (least recently used evicted first) to keep memory bounded."""
+
+    def __init__(self, ttl_seconds: float = 1800, max_items: int = 5000):
+        self.ttl, self.max_items = ttl_seconds, max_items
+        self._items: OrderedDict = OrderedDict()
+        self._locks, self._guard = {}, threading.Lock()
+
+    def _drop(self, cid: str) -> None:
+        self._items.pop(cid, None)
+        self._locks.pop(cid, None)
 
     def create(self) -> Conversation:
         conv = Conversation(uuid.uuid4().hex)
+        now = time.monotonic()
         with self._guard:
-            self._items[conv.id] = (conv, time.monotonic())
+            while self._items:  # oldest-touched first, so expired entries sit at the front
+                cid, (_, touched) = next(iter(self._items.items()))
+                if now - touched <= self.ttl and len(self._items) < self.max_items:
+                    break
+                self._drop(cid)
+            self._items[conv.id] = (conv, now)
             self._locks[conv.id] = threading.Lock()
         return conv
 
@@ -42,9 +58,10 @@ class ConversationStore:
         with self._guard:
             item = self._items.get(cid)
             if item is None or time.monotonic() - item[1] > self.ttl:
-                self._items.pop(cid, None)
+                self._drop(cid)
                 return None
             self._items[cid] = (item[0], time.monotonic())
+            self._items.move_to_end(cid)
             return item[0]
 
     def lock(self, cid: str) -> threading.Lock:
