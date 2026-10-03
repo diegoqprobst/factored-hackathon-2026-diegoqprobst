@@ -1,4 +1,4 @@
-.PHONY: setup download pipeline test
+.PHONY: setup download pipeline test router-data router
 
 setup:
 	uv sync
@@ -11,3 +11,9 @@ pipeline:
 
 test:
 	uv run pytest -q
+
+router-data:
+	uv run --env-file .env python -m src.router.paraphrase
+
+router:
+	uv run --group embeddings python -m src.router.evaluate
