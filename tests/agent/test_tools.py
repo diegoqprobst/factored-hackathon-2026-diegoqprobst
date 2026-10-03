@@ -52,3 +52,23 @@ def test_persistent_fault_becomes_unavailable(bank, frozen):
         Tools(bank, t, faults={"search_transactions": 99}, sleep=lambda s: None).call(
             Stage.IDENTIFY, "search_transactions", token=tok)
     assert (t.events[-1]["ok"], t.events[-1]["error"], t.events[-1]["attempts"]) == (False, "unavailable", 3)
+
+
+def test_concurrent_tool_calls_on_a_shared_connection(bank, frozen):
+    """Found by the evaluation: parallel conversations on one sqlite connection interleaved cursors
+    (InterfaceError/TypeError). Every bank access through the tool gate must be serialised."""
+    import threading
+    tok, errors = login(bank, "111"), []
+
+    def worker():
+        try:
+            for _ in range(40):
+                Tools(bank, Tracer("c", 1)).call(Stage.IDENTIFY, "search_transactions", token=tok, merchant="oxxo")
+        except Exception as exc:  # noqa: BLE001
+            errors.append(type(exc).__name__)
+    threads = [threading.Thread(target=worker) for _ in range(12)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert errors == []

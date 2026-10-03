@@ -41,7 +41,8 @@ def _has_words(text: str) -> bool:
 class Agent:
     def __init__(self, conn, router, extractor, *, mode: str, faults: dict | None = None, max_low_confidence: int = 2,
                  max_injections: int = 2, max_not_found: int = 2, max_choose_retries: int = 2):
-        self.conn, self.router, self.extractor, self.mode, self.faults = conn, router, extractor, mode, faults
+        self.conn, self.router, self.extractor, self.mode = conn, router, extractor, mode
+        self.faults = dict(faults) if faults else None  # consumed per agent, never shared across runs or systems
         self.max_low_confidence, self.max_injections = max_low_confidence, max_injections
         self.max_not_found, self.max_choose_retries = max_not_found, max_choose_retries
         self.multi_charges = load_policy().human_review_dispute_count  # same threshold as policy P5

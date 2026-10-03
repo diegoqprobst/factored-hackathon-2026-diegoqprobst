@@ -72,3 +72,6 @@ The sandbox holds 497,202 transactions (120 days to 2026-06-17), 3,291 USD FX ra
 `tz_offset_violations` = **51**: every one is timestamped exactly `06:00:00` on the day after its partition,
 so partitions are `(06:00, 06:00]` UTC — an inclusive-end boundary convention, not late or wrong data.
 The UTC-6 reading of Q9 holds; the metric is kept as a monitor (a jump above ~51 would signal real drift).
+
+## 6. Finding from building the evaluation (2026-09-26)
+**Purchases are capped at exactly 500 USD.** Every transaction that has a merchant is a `Purchase` with USD value ≤ 500.00; larger amounts appear only on withdrawals, transfers, payments and adjustments (no merchant). Policy rule P4 (> 500 USD → human) therefore can never fire on a merchant purchase in this dataset. The evaluation exercises P4 with card movements without a merchant, identified by a unique amount ("No reconozco un retiro de …").
