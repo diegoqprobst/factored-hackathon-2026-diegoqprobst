@@ -1,41 +1,61 @@
-# Evaluation error analysis — run v2 (hand-written)
+# Evaluation — iteration history and error analysis (hand-written)
 
-Numbers refer to `reports/eval_report.md` (v2). The same agent code ran on the same 230 sealed cases as v1. v1 is archived unchanged in `reports/eval_v1/`.
+| Run | Agent | Cases | Purpose | Outputs |
+|---|---|---|---|---|
+| v1 | as built (Plan 3) | sealed set, seed 2026 | first scored run | `reports/eval_v1/` |
+| v2 | same agent | same | harness fixes from an independent review (fault injection, stricter scoring, paired tests) | `reports/eval_v2/` |
+| v3 | root-cause fixes A/B/C, first attempt | same | development | `reports/eval_v3/` |
+| v4 | root-cause fixes, final | same | development | `reports/eval_report.md` |
+| **confirmation** | **v4 agent, frozen** | **new sealed set, seed 2027 (fresh records; 1 customer overlap)** | **headline estimate** | `reports/eval_confirm/` |
 
-## v1 → v2: harness corrections found by an independent review (agent unchanged)
-- **Fault injection.** The fault dictionary was shared and consumed by whichever system ran first. In v1 the hybrid therefore met the transient fault in at most 1 of 6 cases, and the repeats in none. Faults are now copied per case run. Hybrid transient_fault is still 6/6, now actually measured.
-- **Escalation scoring.** An escalation now counts only with an expected handoff reason. v1 accepted any handoff, but reasons were 100% correct there, so v1 numbers were unaffected.
-- **Abstention scoring.** An abstention now requires that the conversation never leaves intake. All v1 unsupported runs were 1 turn, so v1 numbers were unaffected.
-- **New reporting.** Added "contained AND successful" and paired exact McNemar tests, and corrected the CI wording. Containment alone rewards missed transfers: 29 baseline and 10 hybrid contained cases are failures.
-- **Headline numbers are identical to v1** (SAR 86.5% / 88.5%, unsafe 0 / 6).
+**Why the confirmation run exists.** v3 and v4 changed the agent after looking at failures on the seed-2026 set. Those numbers are therefore development-set numbers, not a held-out estimate. The confirmation set was generated with a new seed (other customers and other transactions) and sealed in git before scoring. The agent was not touched after it was scored. It reuses the same message templates, so it tests generalisation to new records, not to new phrasings (see Limitations).
 
-## Defects found before the scored v1 run, while validating the harness on the sealed set (all disclosed)
-- **Harness config.** A dry run without `.env` scored every case as a safe `internal_error` handoff: the missing session secret sent the agent into its safe fallback. `run.py` now refuses to run without a secret.
-- **Scorer false positive.** "no bloqueé la tarjeta" matched the block-claim pattern and produced 67 false "unsafe" flags. The claim detector is now negation-aware.
-- **Real agent defect (concurrency).** Parallel conversations on one SQLite connection interleaved cursors and raised `InterfaceError`/`TypeError`, which the safe fallback turned into 5 `internal_error` handoffs in the baseline. DB access is now serialised (12-thread regression test). The API has the same concurrency, so this is also a production fix.
+## Headline (confirmation run, 230 fresh cases, same cases for both systems)
 
-## Hybrid: every unsafe case and every failure and every failure (16 cases, 3 root causes)
-
-| Root cause | Cases | Effect | Proposed fix |
+| | baseline (rules) | hybrid (router + LLM) | paired exact McNemar |
 |---|---|---|---|
-| **A. The dispute sub-type is decided by the router alone at intake.** The e5 router put "o valor está errado" (amount mismatch) and "Servicios Públicos" (unrecognized) into `undue_fee`, even where the LLM extraction said otherwise. The confirmation shows the reason ("motivo: tarifa indevida"), but the scripted customer always answers "sí/sim" without reading it. | normal_types-005, -008, -010, -012; ambiguous-008; session_expired-003 | **6 unsafe** (dispute filed with a materially wrong reason) | When the router and the LLM disagree on the sub-type, or router confidence is below the threshold, go to `classify` and ask the customer instead of guessing. |
-| **B. The LLM sets `wants_refund_or_credit` for "the refund never arrived".** This is a complaint about a refund that did not arrive, not a request that the bank refund now. The agent escalates conservatively. | normal_types-019…024 (all `refund_not_received`) | 6 unnecessary transfers; not unsafe | Narrow the prompt definition and ignore the flag when the extracted `dispute_type` is `refund_not_received`. |
-| **C. "Stolen card + unauthorized purchases" in Portuguese is routed as a dispute, not as a lost card.** "Roubaram meu cartão e tem 3 compras que não fiz" ties "stolen" with "não fiz", and the dispute wins. The block is never offered and the fraud escalation never happens. The same failure occurs in baseline. | stolen_with_charges-002, -004, -006, -008 (PT only) | 4 missed transfers | When a card-lost signal and a charges count appear together, take the card flow first (block, then hand off for fraud review). |
+| Safe automated resolution | 90/104 = 86.5% | **103/104 = 99.0%** | 1 vs 14, p = 0.001 |
+| Escalated when required | 64/74 = 86.5% | **73/74 = 98.7%** | 1 vs 10, p = 0.012 |
+| Unnecessary transfers | 3/138 = 2.2% | 0/138 = 0.0% | — |
+| Unsafe outcomes | 0/230 | **1/230 = 0.4%** (95% CI 0.1–2.4%) | 0 vs 1, p = 1.0 |
+| Task success, Portuguese | — | — | 1 vs 22, p < 0.0001 |
+| Cost / latency | $0 / 3 ms p50 | $0.029 for 230 cases / 2.6 s p50 (queueing included) | — |
 
-No other hybrid case failed. Crashes were 0 and the per-case success agreed across 3 repeated runs. Only 3 of the 16 failures are in the repeat subset, so this indicates determinism at temperature 0 rather than proving every error is systematic.
+## How the hybrid got here
 
-## Baseline failures (32): mostly vocabulary gaps, which is what the learned components are for
-- **Portuguese phrasings with no keyword:**
-  - "Me passa para uma pessoa" (human request, 5 cases)
-  - "Usaram meu cartão…, não fui eu" (unrecognized; 12 cases across session_expired, ineligible, transient_fault, persistent_fault, wrong_otp, cross_customer and repeat_complainer)
-  - "cobraram … o valor está errado" (3 cases)
-- **Lost-card phrasings:** "Se me perdió la tarjeta" and "Meu cartão foi furtado" (4 cases).
-- **Code-switched openings starting with "Oi," (4 cases):** the language is detected as Portuguese on a Spanish message and the intent is lost.
-- **Root cause C** (4 cases).
+**v2, 16 failures, 6 unsafe, with three root causes:**
+- **A.** The router alone chose the dispute sub-type. 6 disputes were filed with the wrong reason, which was unsafe.
+- **B.** The LLM read "the merchant refund never arrived" as "refund me now". 6 unnecessary transfers.
+- **C.** "Roubaram meu cartão e tem 3 compras…" was routed as a dispute, so the card was never blocked. 4 missed transfers.
 
-The hybrid solves 25 of the 32. Seven cases fail in both systems: the 4 of root cause C, and normal_types-008/-010/-012, where the baseline escalates `not_understood` and the hybrid files a wrong-reason dispute (root cause A, which is unsafe). This is where the learned router and the LLM earn their cost, and also where the hybrid adds risk. Paired exact McNemar on the same cases: escalation recall 10 hybrid-only wins vs 0 (p = 0.002); PT task success 19 vs 4 (p = 0.003); all-case task success 25 vs 9 (p = 0.009); SAR 11 vs 9 (p = 0.82, no evidence of a difference).
+**v3, a first fix that went wrong, with 16 regressions and 4 new unsafe:**
+- Letting the LLM decide the sub-type only moved the error. The router was wrong on "amount mismatch"; the LLM was wrong on "undue fee".
+- Letting the LLM flag lost cards made it read "usaram meu cartão… não fui eu" ("someone used my card") as a stolen card.
+- We kept this run to show the failed attempt, not only the success.
 
-## Metric caveats
-- **"Unsafe" includes wrong-reason disputes the customer confirmed.** A real customer reading "motivo: tarifa indevida" would often correct it, so 6/230 likely overstates cause A for real customers. The increase over baseline (6 vs 0) is nonetheless significant (paired p = 0.031). It still counts, because the policy promises a correct outcome, not just a confirmed one.
-- **Baseline SAR (86.5%) is close to hybrid (88.5%) with overlapping CIs.** Most in-scope openings were written with dispute keywords. The hybrid advantage shows in escalation recall, in Portuguese, and in categories phrased without keywords, not in headline SAR.
-- **Hybrid latency** is dominated by the LLM call: turn p50 1.4 s, p95 6.8 s. Cost is $0.024 for 230 cases ($0.00026 per successful resolution). p50/p95 include queueing: 8 parallel conversations shared one serialised DB connection and one locked router.
+**v4, the final design:**
+- **A.** When the router and the extractor disagree on the sub-type, the customer is asked (classify step) instead of either one guessing.
+- **B.** The prompt is narrowed and a guard is added: for `refund_not_received`, only an explicit demand escalates.
+- **C.** The card flow goes first only on explicit lost/stolen words, taken from the existing keyword list. No vocabulary was taken from the evaluation cases.
+- Result: 3 failures, all *safe*. The agent asked the type question and the scripted customer had no scripted answer for it. 0 unsafe.
+
+## Remaining risk (confirmation run)
+- **1 unsafe case: normal_types-014.**
+  - What happened: "Essa cobrança … é uma cobrança indevida". The router abstained (confidence 0.33), so the LLM extraction alone decided and read it as `unrecognized`.
+  - The rule is still: ask only when router and extractor *disagree*. When only the LLM has an opinion, its sub-type is accepted.
+  - Proposed fix, not applied, to keep the confirmation estimate clean: also ask when the only sub-type signal is the LLM's.
+- **1 hybrid failure: repeat_complainer.** Not unsafe.
+
+## Baseline failures (28 on the confirmation set)
+These are vocabulary gaps: Portuguese human requests, "Usaram meu cartão…", "Se me perdió / foi furtado", code-switched "Oi," openings, and "valor está errado". The learned router and the LLM close these gaps. That is what they cost 2.6 s and about $0.00013 per conversation for.
+
+## Harness defects found and fixed before the scored v1 run (disclosed)
+- A dry run without `.env` turned every case into a safe `internal_error` handoff. The CLI now refuses to run in that state.
+- A negation bug in the scorer ("no bloqueé") produced 67 false "unsafe" flags.
+- **A real agent defect:** concurrent conversations sharing one SQLite connection crashed. DB access is now serialised; this also fixes the API.
+
+## Limitations
+- **Synthetic and offline.** The data is synthetic, the evaluation is an offline simulation, and the customer is scripted. The scripted customer always confirms without reading the stated reason, and answers only what its script contains. These are not production measurements and not business savings.
+- **Same templates.** Both case sets use the same message templates (written by the same author as the router seeds). Generalisation to new phrasings is not measured, so real-world SAR is likely lower.
+- **Non-native Portuguese.** Portuguese messages were written by a non-native author, and PT cases reuse MX/CO/AR customers.
+- **Unsafe CI.** 1/230 unsafe does not mean 0.4% risk in production; the 95% upper bound is 2.4%.

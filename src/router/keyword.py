@@ -47,6 +47,11 @@ INJECTION_PATTERNS = [re.compile(p) for p in (
 )]
 
 
+def intent_hits(text: str) -> dict[str, int]:
+    t = normalize((text or "")[:MAX_CHARS])
+    return {i: sum(len(p.findall(t)) for p in KEYWORD_PATTERNS[i]) for i in INTENTS}
+
+
 class KeywordRouter:
     version = "keyword_v1"
     threshold = 0.0
@@ -57,7 +62,7 @@ class KeywordRouter:
         words = re.findall(r"[a-z]+", t)
         es, pt = sum(w in ES_WORDS for w in words), sum(w in PT_WORDS for w in words)
         language = "pt" if pt > es else "es"
-        hits = {i: sum(len(p.findall(t)) for p in KEYWORD_PATTERNS[i]) for i in INTENTS}
+        hits = intent_hits(text)
         total = sum(hits.values())
         if total == 0:
             return RouterResult("oos_other", 0.0, language, injection, float(injection), True, self.version)

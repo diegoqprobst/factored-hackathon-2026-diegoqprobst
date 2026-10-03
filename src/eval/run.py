@@ -16,7 +16,7 @@ from datetime import date
 from pathlib import Path
 
 from src.bank import config, db
-from src.eval.cases import CASES_PATH, build_cases, load_cases, save_cases, verify_seal
+from src.eval.cases import CASES_PATH, SEED, build_cases, load_cases, save_cases, verify_seal
 from src.eval.report import render_report
 from src.eval.runner import LockedRouter, run_all
 from src.eval.scoring import agreement, aggregate, mcnemar, observed_writes, score
@@ -67,28 +67,33 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="cmd", required=True)
     b = sub.add_parser("build")
     b.add_argument("--force", action="store_true")
+    b.add_argument("--seed", type=int, default=SEED)
+    b.add_argument("--out", type=Path, default=CASES_PATH)
     r = sub.add_parser("run")
     r.add_argument("--systems", default="baseline,hybrid")
     r.add_argument("--repeats", type=int, default=3)
     r.add_argument("--repeat-subset", type=int, default=60)
     r.add_argument("--workers", type=int, default=8)
     r.add_argument("--max-cost-usd", type=float, default=1.0)
+    r.add_argument("--cases", type=Path, default=CASES_PATH)
+    r.add_argument("--out-dir", type=Path, default=Path("reports"))
     args = ap.parse_args(argv)
     if args.cmd == "build":
-        if CASES_PATH.exists() and not args.force:
-            raise SystemExit(f"{CASES_PATH} is sealed; pass --force only before any system was scored")
-        print(save_cases(build_cases(db.connect(config.SANDBOX_PATH))))
+        if args.out.exists() and not args.force:
+            raise SystemExit(f"{args.out} is sealed; pass --force only before any system was scored")
+        print(save_cases(build_cases(db.connect(config.SANDBOX_PATH), seed=args.seed), args.out))
         return
     try:
         config.session_secret()  # a misconfigured run would score every case as a safe internal-error handoff
     except RuntimeError as exc:
         raise SystemExit(f"refusing to evaluate: {exc} (run via `make eval`, which loads .env)")
-    if not verify_seal():
+    if not verify_seal(args.cases):
         raise SystemExit("case file does not match its seal")
-    cases = load_cases()
+    cases = load_cases(args.cases)
     systems = args.systems.split(",")
     shared = {}
-    meta = {"cases": len(cases), "cases_sha256": hashlib.sha256(CASES_PATH.read_bytes()).hexdigest(),
+    meta = {"cases": len(cases), "cases_sha256": hashlib.sha256(args.cases.read_bytes()).hexdigest(),
+            "cases_file": str(args.cases),
             "git_sha": subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip(),
             "date": date.today().isoformat(), "router": "keyword_v1", "llm_model": "none", "workers": args.workers}
     from src.agent.nlu import SYSTEM_PROMPT
@@ -126,10 +131,11 @@ def main(argv=None):
         subset = _subset(cases, args.repeat_subset)
         reps = [_run_system("hybrid", subset, shared, args.workers, args.max_cost_usd) for _ in range(args.repeats)]
         summary["repeats"] = agreement(reps)
-    Path("reports").mkdir(exist_ok=True)
-    Path("reports/eval_results.jsonl").write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in results))
-    Path("reports/eval_summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False))
-    Path("reports/eval_report.md").write_text(render_report(summary))
+    out = args.out_dir
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "eval_results.jsonl").write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in results))
+    (out / "eval_summary.json").write_text(json.dumps(summary, indent=2, ensure_ascii=False))
+    (out / "eval_report.md").write_text(render_report(summary))
     print(json.dumps({s: {"sar": a["sar"]["rate"], "unsafe": a["unsafe"]["k"], "cost": a["cost"]["total_usd"]}
                       for s, a in summary["systems"].items()}, indent=2))
 
