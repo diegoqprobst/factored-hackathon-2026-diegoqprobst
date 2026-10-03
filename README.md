@@ -24,3 +24,21 @@ make test
 
 The dataset is synthetic (organizer-provided). Known limitations are listed in `reports/eda_findings.md`.
 The dispute policy (`policy/dispute_policy_v1.yaml`) is a **synthetic, team-defined** policy.
+
+## Running the agent
+
+```bash
+make serve            # hybrid: learned router + LLM extraction (needs OPENROUTER_API_KEY and the embeddings group)
+make serve-baseline   # rules-only baseline: keyword router + regex extraction, no LLM
+make serve-demo       # hybrid + DEMO_MODE=1 (exposes the simulated SMS/OTP; demo only, never in production)
+curl -s localhost:8000/v1/chat -H 'content-type: application/json' -d '{"message": "No reconozco un cargo de Uber"}'
+```
+
+The agent is a finite-state machine: authenticate → identify the charge → classify → policy → confirm → act → verify.
+- **Understanding only.** The router and the LLM understand messages; they never act and never write the replies the customer sees. Replies are templates filled with facts read back from the bank services.
+- **Guarded tools.** Each stage can call only the bank tools it needs.
+- **Checked writes.** Every write needs an explicit "sí"/"sim" and is read back before the agent claims it happened.
+- **Structured handoffs.** Anything outside policy goes to a human with a structured payload (`handoffs` table): the request, verified facts, actions taken and open questions.
+- **Traces.** Every turn writes a trace (`agent_traces`: router decision, tool calls, policy rule and version, LLM tokens and cost) available at `/v1/conversations/{id}/trace`. Aggregate latency, cost and escalation are at `/v1/metrics`.
+- **Demo mode.** `DEMO_MODE=1` (`make serve-demo`) exposes the simulated SMS (OTP) for the conversation's own challenge at `/v1/demo/sms/{id}`; with it on, anyone who knows a document number can authenticate, so it exists only for the demo.
+- **PII to the LLM.** Credentials never reach the LLM; e-mails and document- or phone-like numbers are redacted from every other message before it is sent.

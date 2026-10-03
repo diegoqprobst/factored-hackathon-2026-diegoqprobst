@@ -80,8 +80,9 @@ def start_auth(conn: sqlite3.Connection, document_number: str) -> Challenge:
         conn.execute("insert into otp_challenges(challenge_id, customer_id, code_hash, expires_at, created_at) "
                      "values (?,?,?,?,?)", (challenge_id, customer_id, _code_hash(challenge_id, code),
                                             expires_at.isoformat(), now.isoformat()))
-        conn.execute("insert into sandbox_outbox(channel, destination, body, created_at) values (?,?,?,?)",
-                     ("sms", row["mobile_phone"], f"Tu código de verificación es {code}", now.isoformat()))
+        conn.execute("insert into sandbox_outbox(channel, destination, body, created_at, challenge_id) "
+                     "values (?,?,?,?,?)", ("sms", row["mobile_phone"], f"Tu código de verificación es {code}",
+                                            now.isoformat(), challenge_id))
         conn.commit()
         audit.log(conn, "otp_sent", customer_id=customer_id, challenge_id=challenge_id)
         return Challenge(challenge_id, _mask(row["mobile_phone"]), expires_at)
