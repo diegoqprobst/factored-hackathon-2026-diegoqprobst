@@ -1,19 +1,27 @@
 """HTTP API for the dispute agent. Run: uv run --group embeddings --env-file .env uvicorn --factory src.agent.api:create_app
 Single process, in-memory conversation store with TTL (a declared capacity limit)."""
+import hashlib
 import json
 import os
 import threading
 import time
 import uuid
+from collections import OrderedDict
 from dataclasses import asdict
+from pathlib import Path
 
 import numpy as np
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from src.agent.demo import demo_pool, demo_scenarios
 from src.agent.factory import build_agent
 from src.agent.state import Conversation
 from src.bank import config, db
+
+STATIC_DIR = Path(__file__).parent / "static"
 
 
 class ChatIn(BaseModel):
@@ -22,13 +30,28 @@ class ChatIn(BaseModel):
 
 
 class ConversationStore:
-    def __init__(self, ttl_seconds: int = 1800):
-        self.ttl, self._items, self._locks, self._guard = ttl_seconds, {}, {}, threading.Lock()
+    """Public instance: every POST /v1/chat without an id creates an entry, so expired entries are swept on
+    create and the store is capped (least recently used evicted first) to keep memory bounded."""
+
+    def __init__(self, ttl_seconds: float = 1800, max_items: int = 5000):
+        self.ttl, self.max_items = ttl_seconds, max_items
+        self._items: OrderedDict = OrderedDict()
+        self._locks, self._guard = {}, threading.Lock()
+
+    def _drop(self, cid: str) -> None:
+        self._items.pop(cid, None)
+        self._locks.pop(cid, None)
 
     def create(self) -> Conversation:
         conv = Conversation(uuid.uuid4().hex)
+        now = time.monotonic()
         with self._guard:
-            self._items[conv.id] = (conv, time.monotonic())
+            while self._items:  # oldest-touched first, so expired entries sit at the front
+                cid, (_, touched) = next(iter(self._items.items()))
+                if now - touched <= self.ttl and len(self._items) < self.max_items:
+                    break
+                self._drop(cid)
+            self._items[conv.id] = (conv, now)
             self._locks[conv.id] = threading.Lock()
         return conv
 
@@ -36,9 +59,10 @@ class ConversationStore:
         with self._guard:
             item = self._items.get(cid)
             if item is None or time.monotonic() - item[1] > self.ttl:
-                self._items.pop(cid, None)
+                self._drop(cid)
                 return None
             self._items[cid] = (item[0], time.monotonic())
+            self._items.move_to_end(cid)
             return item[0]
 
     def lock(self, cid: str) -> threading.Lock:
@@ -55,8 +79,8 @@ def metrics_summary(conn) -> dict:
     total = round(sum(r["cost_usd"] for r in rows), 6)
     return {"turns": len(rows), "conversations": conversations, "handoffs": handoffs,
             "escalation_rate": handoffs / conversations if conversations else None,
-            "latency_ms_p50": float(np.percentile(latencies, 50)) if latencies else None,
-            "latency_ms_p95": float(np.percentile(latencies, 95)) if latencies else None,
+            "latency_ms_p50": round(float(np.percentile(latencies, 50)), 1) if latencies else None,
+            "latency_ms_p95": round(float(np.percentile(latencies, 95)), 1) if latencies else None,
             "cost_usd_total": total, "cost_usd_per_conversation": total / conversations if conversations else None}
 
 
@@ -64,10 +88,49 @@ def create_app(conn=None, agent=None, demo_mode: bool | None = None) -> FastAPI:
     if conn is None:
         conn = db.connect(config.SANDBOX_PATH)
         db.create_schema(conn)
-    agent = agent or build_agent(conn, os.environ.get("AGENT_MODE", "hybrid"))
+    mode = os.environ.get("AGENT_MODE", "hybrid")
+    agent = agent or build_agent(conn, mode, llm_budget_usd=float(os.environ.get("AGENT_LLM_DAILY_BUDGET_USD", "0.5"))
+                                 if mode == "hybrid" else None)
     demo = demo_mode if demo_mode is not None else os.environ.get("DEMO_MODE") == "1"
     store = ConversationStore()
     app = FastAPI(title="LATAM Bank dispute agent", version="0.3.0")
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    pool: dict = {}
+    pool_ready = threading.Event()
+
+    def build_pool():
+        try:
+            pool.update(demo_pool(conn))
+        finally:
+            pool_ready.set()
+
+    if demo:  # the pool scans the whole sandbox (tens of seconds on a small instance): start it at boot
+        threading.Thread(target=build_pool, daemon=True, name="demo-pool").start()
+
+    # Asset URLs carry a content hash and the page itself is never cached, so a returning browser always gets the
+    # current UI (seen live: a cached app.js kept the old buttons after a deploy).
+    assets = {name: hashlib.sha256((STATIC_DIR / name).read_bytes()).hexdigest()[:12] for name in ("app.js", "styles.css")}
+    page = (STATIC_DIR / "index.html").read_text()
+    for name, digest in assets.items():
+        page = page.replace(f'"/static/{name}"', f'"/static/{name}?v={digest}"')
+
+    @app.api_route("/", methods=["GET", "HEAD"])  # HEAD for uptime monitors and preview readiness probes
+    def index():
+        return HTMLResponse(page, headers={"Cache-Control": "no-cache"})
+
+    @app.get("/v1/config")
+    def app_config():
+        llm = getattr(agent.extractor, "llm", None)
+        return {"mode": agent.mode, "router": getattr(agent.router, "version", "unknown"),
+                "llm_model": getattr(llm, "model", None), "demo": demo}
+
+    @app.get("/v1/demo/customers")
+    def demo_customers():
+        if not demo:
+            raise HTTPException(404, "not available")
+        if not pool_ready.wait(timeout=2):  # never park a worker thread: the UI retries every few seconds
+            raise HTTPException(503, "demo customers still loading")
+        return demo_scenarios(conn, pool)
 
     @app.get("/health")
     def health():
@@ -106,5 +169,17 @@ def create_app(conn=None, agent=None, demo_mode: bool | None = None) -> FastAPI:
     @app.get("/v1/metrics")
     def metrics():
         return metrics_summary(conn)
+
+    if os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("SLACK_BOT_TOKEN"):
+        from src.channels.bridge import ChannelBridge
+        bridge = ChannelBridge(agent, store, conn, demo)
+        if os.environ.get("TELEGRAM_BOT_TOKEN") and os.environ.get("TELEGRAM_WEBHOOK_SECRET"):
+            from src.channels.telegram import telegram_router
+            app.include_router(telegram_router(bridge, bot_token=os.environ["TELEGRAM_BOT_TOKEN"],
+                                               secret=os.environ["TELEGRAM_WEBHOOK_SECRET"]))
+        if os.environ.get("SLACK_BOT_TOKEN") and os.environ.get("SLACK_SIGNING_SECRET"):
+            from src.channels.slack import slack_router
+            app.include_router(slack_router(bridge, bot_token=os.environ["SLACK_BOT_TOKEN"],
+                                            signing_secret=os.environ["SLACK_SIGNING_SECRET"]))
 
     return app

@@ -106,7 +106,7 @@ def main(argv=None):
         from src.agent.llm import OpenRouterLLM
         from src.router.classifier import load_router
         import os
-        shared["router"] = LockedRouter(load_router())
+        shared["router"] = LockedRouter(load_router(os.environ.get("ROUTER_PATH", "models/router_v1")))
         shared["llm"] = OpenRouterLLM(os.environ.get("AGENT_LLM_MODEL", "google/gemma-4-31b-it"))
         meta["router"], meta["llm_model"] = shared["router"].version, shared["llm"].model
     results, summary = [], {"meta": meta, "systems": {}}

@@ -224,3 +224,76 @@ def test_low_confidence_counter_resets(base, bank):
     r = auth(base, c, bank)
     assert r.stage == "identify"
     assert base.handle(c, "ehh zzz").stage == "identify"
+
+
+class _NoMeansDisputeRouter:
+    """Mimics the deployed TF-IDF router, which scores a bare "no" as dispute_unrecognized (0.81): its
+    training openings are full of "no reconozco…". A plain yes/no answer must still win over the route."""
+    version = "stub"
+
+    def __init__(self):
+        from src.router.keyword import KeywordRouter
+        self.inner = KeywordRouter()
+
+    def predict(self, text):
+        r = self.inner.predict(text)
+        if parse_confirm(text) is False:
+            return RouterResult("dispute_unrecognized", 0.81, r.language, False, 0.0, False, "stub")
+        return r
+
+
+@pytest.mark.parametrize("answer", ["no", "No.", "não"])
+def test_plain_no_at_block_offer_declines_even_if_router_sees_a_dispute(bank, frozen, answer):
+    agent = build_agent(bank, "baseline", router=_NoMeansDisputeRouter())
+    c = Conversation("n1")
+    agent.handle(c, "No reconozco un cargo de Uber")
+    auth(agent, c, bank)
+    agent.handle(c, "sí")
+    r = agent.handle(c, answer)
+    assert r.stage == "done" and card_status(bank) == "Active" and "un cargo a la vez" not in r.reply
+
+
+def test_plain_no_at_confirm_cancels_even_if_router_sees_a_dispute(bank, frozen):
+    agent = build_agent(bank, "baseline", router=_NoMeansDisputeRouter())
+    c = Conversation("n2")
+    agent.handle(c, "No reconozco un cargo de Uber")
+    auth(agent, c, bank)
+    r = agent.handle(c, "no")
+    assert r.stage == "done" and disputes(bank) == []
+
+
+def test_model_only_no_does_not_swallow_a_new_charge_at_confirm(bank, frozen):  # Final review Important 4
+    from src.agent.nlu import LLMExtractor
+    agent = Agent(bank, _NoMeansDisputeRouter(), LLMExtractor(FakeLLM({"confirm": False})), mode="hybrid")
+    c = Conversation("n3")
+    agent.handle(c, "No reconozco un cargo de Uber")
+    auth(agent, c, bank)
+    r = agent.handle(c, "No, el que no reconozco es otro de 80 en Oxxo")
+    assert r.stage == "confirm" and "un cargo a la vez" in r.reply and disputes(bank) == []
+
+
+@pytest.mark.parametrize("text", [  # seen in the live demo: an explicit action verb is a clear yes
+    "sim, bloqueia", "Sim, bloqueie", "sí, bloquéala", "sí bloquéala por favor", "bloquéala", "dale, ábrela",
+    "sim, pode abrir", "sí, ábrela",
+])
+def test_yes_with_the_action_verb_is_a_yes(text):
+    assert parse_confirm(text) is True
+
+
+@pytest.mark.parametrize("text", ["no la bloquees", "não bloqueia", "¿la bloqueo?", "bloquéala si vuelve a pasar"])
+def test_action_verb_does_not_turn_a_no_or_a_condition_into_a_yes(text):
+    assert parse_confirm(text) is not True
+
+
+@pytest.mark.parametrize("text", [  # seen live: an amount pasted at the OTP step burned attempts
+    "No reconozco un cargo de 451998.09 en Laboratorio Central", "fueron 123456,50 pesos", "1.451998",
+])
+def test_decimal_amount_is_never_an_otp(text):
+    from src.agent.nlu import parse_otp
+    assert parse_otp(text) is None
+
+
+@pytest.mark.parametrize("text, code", [("123456", "123456"), ("mi código es 123 456", "123456"), ("123456.", "123456")])
+def test_plain_otp_still_parses(text, code):
+    from src.agent.nlu import parse_otp
+    assert parse_otp(text) == code

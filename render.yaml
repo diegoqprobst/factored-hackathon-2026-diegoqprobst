@@ -1,0 +1,27 @@
+# Render Blueprint: New → Blueprint → select this repo. Fill the three secrets (sync: false) in the dashboard.
+services:
+  - type: web
+    name: latam-dispute-agent
+    runtime: docker
+    plan: free
+    branch: plan4-ui-deploy
+    dockerfilePath: ./deploy/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: AGENT_MODE
+        value: hybrid
+      - key: DEMO_MODE
+        value: "1"
+      - key: ROUTER_PATH
+        value: models/router_tfidf_v1
+      - key: AGENT_LLM_DAILY_BUDGET_USD
+        value: "0.5"
+      - key: HF_DATASET
+        value: diegoandres226/latam-bank-sandbox
+      - key: BANK_SESSION_SECRET
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: HF_DATA_TOKEN
+        sync: false

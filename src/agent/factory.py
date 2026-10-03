@@ -9,13 +9,17 @@ from src.agent.orchestrator import Agent
 from src.router.keyword import KeywordRouter
 
 
-def build_agent(conn, mode: str = "hybrid", *, router=None, llm=None, faults: dict | None = None) -> Agent:
+def build_agent(conn, mode: str = "hybrid", *, router=None, llm=None, faults: dict | None = None,
+                llm_budget_usd: float | None = None) -> Agent:
     if mode == "baseline":
         return Agent(conn, router or KeywordRouter(), RuleExtractor(), mode="baseline", faults=faults)
     if mode != "hybrid":
         raise ValueError(f"unknown mode {mode!r}")
     if router is None:
         from src.router.classifier import load_router
-        router = load_router()
+        router = load_router(os.environ.get("ROUTER_PATH", "models/router_v1"))
     llm = llm or OpenRouterLLM(os.environ.get("AGENT_LLM_MODEL", DEFAULT_MODEL))
+    if llm_budget_usd is not None:
+        from src.agent.budget import BudgetedLLM
+        llm = BudgetedLLM(llm, llm_budget_usd)
     return Agent(conn, router, LLMExtractor(llm), mode="hybrid", faults=faults)

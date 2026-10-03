@@ -13,12 +13,15 @@ from src.router.labels import DISPUTE_TYPE_BY_INTENT, normalize
 
 TYPE_BY_NUMBER = {1: "unrecognized", 2: "duplicate", 3: "amount_mismatch", 4: "undue_fee", 5: "refund_not_received"}
 YES = {"si", "s", "dale", "ok", "okay", "confirmo", "confirmar", "correcto", "claro", "afirmativo", "sim", "isso",
-       "pode", "exato", "yes", "listo", "perfecto", "bora", "confirma", "hazlo", "adelante", "certo", "vale"}
+       "pode", "exato", "yes", "listo", "perfecto", "bora", "confirma", "hazlo", "adelante", "certo", "vale",
+       # the action itself, as an imperative ("sim, bloqueia", "sí, ábrela"); the infinitive only after "pode"
+       "bloquea", "bloqueala", "bloquee", "bloqueela", "bloqueia", "bloqueie", "bloqueiem", "abre", "abrela",
+       "abra", "abrala", "abri", "abrir"}
 NO = {"no", "nao", "cancela", "cancelar", "negativo", "nop", "nope", "jamas", "nunca"}
 # Words allowed around a yes/no without changing its meaning. Anything else (a question, a condition, a new
 # request) makes the answer "unclear" and the agent asks again: a write needs an unambiguous yes.
 FILLER = {"por", "favor", "gracias", "obrigado", "obrigada", "porfa", "please", "pls", "ya", "va", "bueno", "pues",
-          "entonces", "senor", "senora", "de", "acuerdo", "mesmo", "mejor", "eso", "esa"}
+          "entonces", "senor", "senora", "de", "acuerdo", "mesmo", "mejor", "eso", "esa", "la", "lo", "ela"}
 ORDINALS = {"primero": 1, "primera": 1, "primeiro": 1, "segundo": 2, "segunda": 2, "tercero": 3, "tercera": 3,
             "terceiro": 3, "cuarto": 4, "quarto": 4, "quinto": 5, "ultimo": -1, "ultima": -1}
 WORD_NUMBERS = {"dos": 2, "dois": 2, "duas": 2, "tres": 3, "cuatro": 4, "quatro": 4, "cinco": 5, "varios": 3,
@@ -45,6 +48,7 @@ class Extraction:
     dispute_type: str | None = None
     choice: int | None = None
     confirm: bool | None = None
+    confirm_rules: bool | None = None  # the strict parser alone; `confirm` may also carry the model's "no"
     charges_count: int | None = None
     wants_human: bool = False
     wants_refund_or_credit: bool = False
@@ -52,7 +56,7 @@ class Extraction:
     source: str = "rules"
 
     def present_fields(self) -> list[str]:
-        return [f.name for f in fields(self) if f.name != "source" and getattr(self, f.name) not in (None, False)]
+        return [f.name for f in fields(self) if f.name not in ("source", "confirm_rules") and getattr(self, f.name) not in (None, False)]
 
 
 def parse_amount(text: str) -> float | None:
@@ -119,7 +123,8 @@ def parse_document(text: str) -> str | None:
 
 
 def parse_otp(text: str) -> str | None:
-    m = re.search(r"(?<!\d)(\d{3})\s?(\d{3})(?!\d)", text or "")
+    # Not part of a decimal amount ("451998.09", "1.451998"): pasting an amount must not burn an OTP attempt.
+    m = re.search(r"(?<!\d)(?<!\d[.,])(\d{3})\s?(\d{3})(?!\d|[.,]\d)", text or "")
     return m.group(1) + m.group(2) if m else None
 
 
@@ -176,6 +181,7 @@ class RuleExtractor:
             amount=None if stage in (Stage.CONFIRM, Stage.BLOCK_OFFER, Stage.CLASSIFY) else parse_amount(text),
             date_from=date_from, date_to=date_to, merchant=_merchant(text), dispute_type=dispute_type, choice=choice,
             confirm=parse_confirm(text) if stage in (Stage.CONFIRM, Stage.BLOCK_OFFER) else None,
+            confirm_rules=parse_confirm(text) if stage in (Stage.CONFIRM, Stage.BLOCK_OFFER) else None,
             charges_count=parse_charges_count(text),
             wants_human=route.intent == "human_request" and not route.abstain,
             wants_refund_or_credit=bool(REFUND_OR_CREDIT.search(normalize(text))),

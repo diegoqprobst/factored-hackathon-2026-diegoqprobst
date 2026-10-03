@@ -60,3 +60,40 @@ def test_metrics(client):
     m = client.get("/v1/metrics").json()
     assert (m["turns"], m["conversations"], m["handoffs"], m["escalation_rate"]) == (1, 1, 1, 1.0)
     assert m["latency_ms_p95"] >= m["latency_ms_p50"] >= 0 and m["cost_usd_total"] == 0.0
+
+
+def test_conversation_store_evicts_expired_and_caps_size():  # Final review Important 1
+    import time as _time
+    from src.agent.api import ConversationStore
+    s = ConversationStore(ttl_seconds=0.05, max_items=3)
+    old = s.create()
+    s.lock(old.id)
+    _time.sleep(0.06)
+    ids = [s.create().id for _ in range(5)]
+    assert len(s._items) <= 3 and len(s._locks) <= 3
+    assert old.id not in s._items and old.id not in s._locks
+    assert s.get(ids[-1]) is not None  # the newest survive
+
+
+def test_metrics_latency_is_rounded(bank, frozen):  # the live footer showed 3228.1699999999996 ms
+    from src.agent.api import metrics_summary
+    bank.execute("insert into agent_traces values ('t1', 'c', 1, 'done', '[]', 3228.1699999999996, 0.1234567891, 'x')")
+    m = metrics_summary(bank)
+    assert m["latency_ms_p50"] == 3228.2 and m["latency_ms_p95"] == 3228.2
+
+
+def test_demo_customers_answers_503_fast_while_the_pool_builds(bank, frozen, monkeypatch):
+    import threading
+    import time as _time
+
+    from fastapi.testclient import TestClient
+
+    import src.agent.api as api
+    from src.agent.factory import build_agent
+    release = threading.Event()
+    monkeypatch.setattr(api, "demo_pool", lambda conn: (release.wait(5), {})[1])
+    c = TestClient(api.create_app(conn=bank, agent=build_agent(bank, "baseline"), demo_mode=True))
+    start = _time.monotonic()
+    r = c.get("/v1/demo/customers")
+    assert r.status_code == 503 and _time.monotonic() - start < 3
+    release.set()
