@@ -2,6 +2,7 @@
 Single process, in-memory conversation store with TTL (a declared capacity limit)."""
 import hashlib
 import json
+import logging
 import os
 import threading
 import time
@@ -22,6 +23,7 @@ from src.agent.state import Conversation
 from src.bank import config, db
 
 STATIC_DIR = Path(__file__).parent / "static"
+log = logging.getLogger(__name__)
 
 
 class ChatIn(BaseModel):
@@ -101,6 +103,8 @@ def create_app(conn=None, agent=None, demo_mode: bool | None = None) -> FastAPI:
     def build_pool():
         try:
             pool.update(demo_pool(conn))
+        except Exception as exc:  # a broken or closed database: no demo scenarios, never a crashed thread
+            log.warning("demo pool build failed: %s", type(exc).__name__)
         finally:
             pool_ready.set()
 

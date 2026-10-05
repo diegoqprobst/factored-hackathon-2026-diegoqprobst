@@ -95,3 +95,23 @@ def test_ui_assets_are_cache_busted(bank, frozen):  # seen live: a returning bro
     css = re.search(r'/static/styles\.css\?v=([0-9a-f]{8,})"', r.text)
     assert js and css
     assert c.head("/").status_code == 200
+
+
+def test_demo_pool_failure_does_not_escape_its_thread(bank, frozen, monkeypatch):
+    # In CI the fixture closed the connection while the pool thread was scanning it (segfault). The close now takes
+    # db.LOCK; a pool build that fails anyway (closed or broken database) is logged and the page shows no scenarios.
+    import sqlite3
+    import threading
+
+    from fastapi.testclient import TestClient
+
+    import src.agent.api as api
+    from src.agent.factory import build_agent
+    escaped = []
+    monkeypatch.setattr(threading, "excepthook", lambda args: escaped.append(args.exc_value))
+
+    def broken(conn):
+        raise sqlite3.ProgrammingError("Cannot operate on a closed database.")
+    monkeypatch.setattr(api, "demo_pool", broken)
+    c = TestClient(api.create_app(conn=bank, agent=build_agent(bank, "baseline"), demo_mode=True))
+    assert c.get("/v1/demo/customers").json() == [] and escaped == []

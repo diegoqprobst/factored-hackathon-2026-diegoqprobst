@@ -69,7 +69,8 @@ def bank(tmp_path):
     conn.executemany("insert into complaint_flags values (?,?,?)", FLAGS)
     conn.commit()
     yield conn
-    conn.close()
+    with db.LOCK:  # a demo-pool thread may still be scanning this connection; closing under it segfaults
+        conn.close()
 
 
 @pytest.fixture(autouse=True)
