@@ -90,3 +90,12 @@ the confirm and block-offer stages. The deterministic baseline reproduced exactl
   `charge_not_found` handoff after "foi na Mercado Central, 924351,39": LLM run-to-run variance on amount/merchant
   extraction, not the change. It is a safe failure (handoff, no write).
 - Take-away for the slides: report the hybrid as a range across runs (SAR 98.1–99.0% on this set), not a point.
+
+## Repeated runs of the deployed hybrid — `reports/eval_confirm_tfidf_repeats/`
+
+Same 230 sealed confirmation cases, plus 63 of them run 3 more times each on fresh sandbox copies (temperature 0).
+
+- Main run: SAR 102/104 = 98.1%, escalation 74/74, unsafe 1/230, identical to the final run.
+- Repeats: per-case success agreement 100% across the 3 runs of the 63 cases; SAR 1.0 in every repeat.
+- Across all separate full runs of this configuration so far, SAR has been 98.1–99.0%: the variance is one or two
+  cases (e.g. `vague-010`), each a safe handoff, never an unsafe write. LLM spend for this run: $0.057.
