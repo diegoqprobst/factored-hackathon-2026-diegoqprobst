@@ -6,18 +6,18 @@
 </div>
 <div style="display:flex; gap:24px">
 <div style="flex:1; display:flex; flex-direction:column; gap:8px; background:#1E2F52; padding:32px; border-radius:16px; border-top:6px solid #F0A052">
-<p style="font-family:'Space Grotesk', Arial, sans-serif; font-size:64px; font-weight:700; color:#F6F4EE">98–99%</p>
-<p style="font-size:26px; color:#C9D3E0">safe automated resolution, vs 86.5% for a rules baseline</p>
+<p style="font-family:'Space Grotesk', Arial, sans-serif; font-size:64px; font-weight:700; color:#F6F4EE">100%</p>
+<p style="font-size:26px; color:#C9D3E0">safe automated resolution (104/104) on a fresh sealed set, vs 86.5% for rules</p>
 </div>
 <div style="flex:1; display:flex; flex-direction:column; gap:8px; background:#1E2F52; padding:32px; border-radius:16px; border-top:6px solid #F0A052">
 <p style="font-family:'Space Grotesk', Arial, sans-serif; font-size:64px; font-weight:700; color:#F6F4EE">74 / 74</p>
 <p style="font-size:26px; color:#C9D3E0">required human handoffs made, with the right reason</p>
 </div>
 <div style="flex:1; display:flex; flex-direction:column; gap:8px; background:#1E2F52; padding:32px; border-radius:16px; border-top:6px solid #F0A052">
-<p style="font-family:'Space Grotesk', Arial, sans-serif; font-size:64px; font-weight:700; color:#F6F4EE">$0.0003</p>
-<p style="font-size:26px; color:#C9D3E0">LLM cost per resolved case (230 held-out conversations)</p>
+<p style="font-family:'Space Grotesk', Arial, sans-serif; font-size:64px; font-weight:700; color:#F6F4EE">0 / 230</p>
+<p style="font-size:26px; color:#C9D3E0">unsafe outcomes; about $0.0006 of LLM per resolved case</p>
 </div>
 </div>
 <p style="position:absolute; left:128px; bottom:64px; width:1664px; font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:24px; color:#9FB0C6">Live: latam-dispute-agent.onrender.com   ·   Repo: factored-hackathon-2026-diegoqprobst   ·   Diego</p>
-<aside>Hi, I'm Diego. This is a dispute agent for LATAM Bank that knows when not to act. It handles card disputes end to end in Spanish and Portuguese: it verifies who you are, finds the exact charge, files the dispute, and when policy says a person should decide, it hands off with everything already verified. On 230 held-out conversations it safely resolves 98 to 99 percent of in-scope disputes, against 86.5 percent for a rules-only baseline, it made every required handoff, and the LLM costs about three hundredths of a cent per resolved case.</aside>
+<aside>Hi, I'm Diego. This is a dispute agent for LATAM Bank that knows when not to act. It handles card disputes end to end in Spanish and Portuguese: it verifies who you are, finds the exact charge, files the dispute, and when policy says a person should decide, it hands off with everything already verified. On 230 held-out conversations it safely resolved every in-scope dispute, 104 out of 104, against 86.5 percent for a rules-only baseline, it made every required handoff, it had no unsafe outcome, and the LLM costs about six hundredths of a cent per resolved case.</aside>
 </section>

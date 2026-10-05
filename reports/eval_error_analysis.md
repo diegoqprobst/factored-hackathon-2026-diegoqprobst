@@ -99,3 +99,28 @@ Same 230 sealed confirmation cases, plus 63 of them run 3 more times each on fre
 - Repeats: per-case success agreement 100% across the 3 runs of the 63 cases; SAR 1.0 in every repeat.
 - Across all separate full runs of this configuration so far, SAR has been 98.1–99.0%: the variance is one or two
   cases (e.g. `vague-010`), each a safe handoff, never an unsafe write. LLM spend for this run: $0.057.
+
+## v5: closing the residual unsafe case — `reports/eval_confirm_seed2028/`, `…_seed2029/`, `…_tfidf_postfix*/`
+
+**The case.** `normal_types-014/016` (PT): "Essa cobrança … é uma cobrança indevida". The router abstained (0.33);
+the keyword rules read `undue_fee`, the LLM read `unrecognized`, and the merged extraction let the model win, so the
+dispute was filed with the wrong reason.
+
+**First attempt (kept, regressed).** "When the router abstains, the model alone never picks the sub-type." It closed
+the case (0 unsafe) but the agent then asked an obvious type question on "Usaram meu cartão … não fui eu" (router
+abstains, rules silent, model right), and the scripted customer has no answer for it: SAR 98.1% → 91.3%, PT task
+success 98.3% → 87.0%, 2 missed transfers — on seed 2027 (`…_tfidf_postfix`) and identically on the freshly sealed
+seed 2028 (`…_seed2028`). Seed 2028 was looked at only in aggregate.
+
+**Final (v5).** When the router abstains, the model's sub-type stands unless the keyword rules read a different one;
+then the customer is asked. Unit tests pin all three situations (conflict → ask; rules silent → model stands; rules
+agree → keep).
+
+**Scored once on a new set sealed before any run (seed 2029):** hybrid SAR 104/104 = 100% [96.4%, 100%], escalation
+74/74, PT task success 115/115, unsafe 0/230, unnecessary transfers 0/138; baseline unchanged (86.5%, 0 unsafe);
+exact McNemar p = 0.0001 (SAR), 0.002 (escalation). The same agent on the seed-2027 cases (`…_tfidf_postfix2`):
+104/104, 74/74, 0 unsafe.
+
+**Caveats.** All sets are built from the same message templates, so they test new records, not new phrasings.
+A perfect score on 104 cases still has a 95% lower bound of 96.4%. LLM spend per run roughly doubled with the same
+number of calls (484), which points to a provider price change, not the agent: $0.00055 per resolution.

@@ -20,9 +20,9 @@
 
 | input | value |
 |---|---|
-| Conversations fully handled with no transfer and a correct outcome | 66.5% |
-| Unsafe outcomes | 1 / 230 |
-| LLM cost per automated resolution | $0.0003 |
+| Conversations fully handled with no transfer and a correct outcome | 67.0% |
+| Unsafe outcomes | 0 / 230 |
+| LLM cost per automated resolution | $0.0006 |
 
 The evaluation mix over-weights hard cases on purpose (74 of 230 must be escalated), so the real containment of ordinary dispute traffic is likely higher; the table below varies it.
 
@@ -30,16 +30,16 @@ The evaluation mix over-weights hard cases on purpose (74 of 230 must be escalat
 
 | containment | contacts automated | agent hours saved | agent FTE freed | customer wait saved (h) | net USD saved @ $6/h | net USD saved @ $10/h | net USD saved @ $15/h |
 |---|---|---|---|---|---|---|---|
-| 40% | 5,695 | 682 | 1.0 | 190 | 3,489 | 6,217 | 9,626 |
-| 55% | 7,831 | 938 | 1.4 | 261 | 5,023 | 8,773 | 13,461 |
-| 67% (eval) | 9,471 | 1,134 | 1.7 | 316 | 6,201 | 10,736 | 16,406 |
+| 40% | 5,695 | 682 | 1.0 | 190 | 3,488 | 6,215 | 9,624 |
+| 55% | 7,831 | 938 | 1.4 | 261 | 5,021 | 8,771 | 13,459 |
+| 67% (eval) | 9,533 | 1,141 | 1.8 | 318 | 6,243 | 10,808 | 16,515 |
 
 ## Cost per resolution
 
 | | cost per contact |
 |---|---|
 | Human agent (median 431 s) | $0.72 / $1.20 / $1.80 at $6 / $10 / $15 per hour |
-| Agent: LLM | $0.0003 |
+| Agent: LLM | $0.0006 |
 | Agent: infrastructure ($50/month over the eval-containment volume) | $0.063 |
 
 **Per contact the agent costs about 5% of a human-handled contact at $10/h.** This ratio does not depend on the bank's size; the absolute savings above do, and this synthetic bank is small (about 39k complaint contacts a year).

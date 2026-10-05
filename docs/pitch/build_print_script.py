@@ -66,9 +66,9 @@ BLOCKS = [
          "asks the customer instead of guessing."),
         ("2:30 – 2:45", "SLIDE 4 · router  &gt;  SLIDE 5 · results",
          "The router was chosen by a rule fixed before the sealed test set was opened, / and it beats keywords by "
-         "more than <b>20 points</b>. / End to end, on <b>230</b> held-out conversations on fresh records, / the "
-         "hybrid safely resolves <b>98 percent</b> of disputes, / against <b>86 and a half</b> for rules, / makes "
-         "every required handoff, / and has <b>one</b> unsafe outcome, which we report."),
+         "more than <b>20 points</b>. / End to end, on <b>230</b> conversations from a fresh set sealed before the run, / "
+         "the hybrid safely resolved <b>every</b> in-scope dispute, <b>104 out of 104</b>, / against <b>86 and a half "
+         "percent</b> for rules, / made every required handoff, / and had <b>zero</b> unsafe outcomes."),
         ("2:45 – 3:00", "SLIDE 6 · production",
          "It runs today with tracing, retries, a spending cap, and a safe fallback, / and we list what is missing "
          "to make it real. / Build something that works, / prove it works, / and know when <b>not</b> to act. / "

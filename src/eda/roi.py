@@ -8,7 +8,7 @@ from pathlib import Path
 
 from src.pipeline.views import connect
 
-EVAL = Path("reports/eval_confirm_tfidf_final/eval_results.jsonl")
+EVAL = Path("reports/eval_confirm_seed2029/eval_results.jsonl")
 OUT = Path("reports/roi_analysis.md")
 YEAR = 2025                                   # last full year in the data
 DISPUTES = ("Cargo no reconocido", "Cobro indebido")

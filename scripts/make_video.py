@@ -11,8 +11,6 @@ import time
 from html import escape
 from pathlib import Path
 
-from playwright.sync_api import sync_playwright
-
 APP = "https://latam-dispute-agent.onrender.com"
 VOICE, RATE = "Samantha", 172
 W, H, VW, VH, BAND = 1920, 1080, 1680, 945, 135   # final frame; content area; caption band height
@@ -62,14 +60,17 @@ SEGMENTS = [
         "It was chosen by a rule fixed before the sealed, hand-written test set was opened.",
         "Both learned routers beat the keyword baseline by more than 20 points of macro F1."]),
     ("slide:results", [
-        "End to end, we ran 230 sealed conversations on fresh records through both systems.",
-        "The hybrid safely resolves 98 percent of in-scope disputes, against 86.5 percent for rules.",
-        "It makes every required handoff, and it has one unsafe outcome, which we report, along with how we got here."]),
+        "End to end, we ran 230 conversations through both systems, on a fresh set of records sealed before the run.",
+        "The hybrid safely resolved every in-scope dispute, 104 out of 104, against 86.5 percent for rules.",
+        "It made every required handoff, with zero unsafe outcomes. The version before had one, and the slide shows how we got here."]),
     ("slide:production", [
         "It runs today, with tracing, bounded retries, a spending cap, and a safe fallback.",
         "And we list what is missing to make it real.",
         "Build something that works, prove it works, and know when not to act. Thank you."]),
 ]
+
+
+HUMAN_OPENING = "Hi, I'm Diego, and this is my entry to the Factored AI and Data Hackathon."
 
 
 def run(*cmd):
@@ -80,6 +81,23 @@ def duration(path: Path) -> float:
     out = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "json", str(path)],
                          check=True, capture_output=True, text=True).stdout
     return float(json.loads(out)["format"]["duration"])
+
+
+def human_voice(voice_dir: Path, out: Path) -> dict:
+    """One clip per segment (01.m4a … 12.m4a, any audio format), recorded by a person. Sentence captions are timed in
+    proportion to their length inside each clip."""
+    audio = {}
+    for i, (_, sentences) in enumerate(SEGMENTS):
+        clip = next(iter(sorted(voice_dir.glob(f"{i + 1:02d}.*"))), None)
+        if clip is None:
+            raise SystemExit(f"missing clip {i + 1:02d}.* in {voice_dir}")
+        wav = out / f"h{i:02d}.wav"
+        run("ffmpeg", "-y", "-i", str(clip), "-af", "silenceremove=start_periods=1:start_threshold=-45dB,"
+            "areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse,loudnorm=I=-16:TP=-1.5",
+            "-ar", "48000", "-ac", "1", str(wav))
+        total, chars = duration(wav), sum(len(x) for x in sentences)
+        audio[i] = [(wav if j == 0 else None, total * len(x) / chars) for j, x in enumerate(sentences)]
+    return audio
 
 
 def narrate(out: Path) -> dict:
@@ -227,7 +245,9 @@ def record_demo(browser, out: Path) -> tuple[Path, dict]:
 # ---- assembly ---------------------------------------------------------------------------------------------------
 def build_segment(i, kind, audio, out: Path, demo_video: Path | None, marks: dict) -> Path:
     durs = [d for _, d in audio[i]]
-    talk = sum(durs) + GAP * (len(durs) - 1) + TAIL
+    human = any(w is None for w, _ in audio[i])
+    gap = 0.0 if human else GAP
+    talk = sum(durs) + gap * (len(durs) - 1) + TAIL
     inputs, total = [], talk
     if kind.startswith("slide:"):
         inputs += ["-loop", "1", "-framerate", "30", "-i", str(out / f"slide_{kind.split(':')[1]}.png")]
@@ -242,17 +262,21 @@ def build_segment(i, kind, audio, out: Path, demo_video: Path | None, marks: dic
         inputs += ["-i", str(out / f"cap{i:02d}_{j}.png")]
     first_audio = 1 + len(durs)
     for wav, _ in audio[i]:
-        inputs += ["-i", str(wav)]
+        if wav is not None:
+            inputs += ["-i", str(wav)]
     f = [f"{base},pad={W}:{H}:{(W - VW) // 2}:0:color={BG}[v0]"]
     t = 0.0
     for j, d in enumerate(durs):
-        f.append(f"[v{j}][{1 + j}:v]overlay=0:{H - BAND}:enable='between(t,{t:.2f},{t + d + GAP:.2f})'[v{j + 1}]")
-        t += d + GAP
-    pieces = []
-    for j in range(len(durs)):
-        f.append(f"[{first_audio + j}:a]apad=pad_dur={GAP}[a{j}]")
-        pieces.append(f"[a{j}]")
-    f.append(f"{''.join(pieces)}concat=n={len(durs)}:v=0:a=1,apad[aout]")
+        f.append(f"[v{j}][{1 + j}:v]overlay=0:{H - BAND}:enable='between(t,{t:.2f},{t + d + gap:.2f})'[v{j + 1}]")
+        t += d + gap
+    if human:
+        f.append(f"[{first_audio}:a]apad[aout]")
+    else:
+        pieces = []
+        for j in range(len(durs)):
+            f.append(f"[{first_audio + j}:a]apad=pad_dur={GAP}[a{j}]")
+            pieces.append(f"[a{j}]")
+        f.append(f"{''.join(pieces)}concat=n={len(durs)}:v=0:a=1,apad[aout]")
     seg = out / f"seg{i:02d}.mp4"
     run("ffmpeg", "-y", *inputs, "-filter_complex", ";".join(f), "-map", f"[v{len(durs)}]", "-map", "[aout]",
         "-t", f"{total:.2f}", "-r", "30", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-preset", "medium", "-crf", "20",
@@ -264,12 +288,19 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--deck", required=True, type=Path)
     ap.add_argument("--out", required=True, type=Path)
+    ap.add_argument("--voice-dir", type=Path, help="use a person's clips 01.* … 12.* instead of the synthetic voice")
     ap.add_argument("--reuse-demo", type=Path, help="skip recording: reuse <out>/demo.webm and <out>/marks.json")
     args = ap.parse_args()
     out = args.out
     out.mkdir(parents=True, exist_ok=True)
-    print("narrating…", flush=True)
-    audio = narrate(out)
+    if args.voice_dir:
+        SEGMENTS[0][1][0] = HUMAN_OPENING
+        audio = human_voice(args.voice_dir, out)
+    else:
+        print("narrating…", flush=True)
+        audio = narrate(out)
+    from playwright.sync_api import sync_playwright  # only needed to render and record
+
     with sync_playwright() as p:
         browser = p.chromium.launch()
         print("rendering slides and captions…", flush=True)

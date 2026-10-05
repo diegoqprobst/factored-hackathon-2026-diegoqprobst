@@ -20,7 +20,7 @@ structured human handoff. Design: `docs/superpowers/specs/2026-09-26-dispute-age
 - Free Render instance: it sleeps after 15 min idle and takes about a minute to wake. The sandbox database is
   downloaded fresh from a private Hugging Face dataset on every start, so demo writes reset. The LLM spend is
   capped per day (`AGENT_LLM_DAILY_BUDGET_USD`); past the cap the agent falls back to rules.
-- Deployed-config evaluation (same sealed confirmation cases): [`reports/eval_confirm_tfidf_final/eval_report.md`](reports/eval_confirm_tfidf_final/eval_report.md).
+- Deployed-config evaluation on a fresh sealed set: [`reports/eval_confirm_seed2029/eval_report.md`](reports/eval_confirm_seed2029/eval_report.md).
 
 ## Setup
 
@@ -71,17 +71,18 @@ year for this (small, synthetic) bank. Agent cost per hour and infrastructure co
 
 ## Evaluation (held-out, offline)
 
-Scripted conversations in ES/PT built from real sandbox records, covering normal, ambiguous, unsupported, human-required and adversarial cases (injection, session expiry, tool faults, cross-customer). Both systems ran the identical sealed cases. Headline numbers come from a **confirmation set of 230 fresh records** (seed 2027), sealed before scoring, with the agent frozen:
+Scripted conversations in ES/PT built from real sandbox records, covering normal, ambiguous, unsupported, human-required and adversarial cases (injection, session expiry, tool faults, cross-customer). Both systems ran the identical sealed cases. Headline numbers are for the **deployed configuration** (TF-IDF router + `gemma-4-31b-it`) on a **fresh set of 230 conversations (seed 2029), sealed in git before it was ever run**:
 
 | | baseline (rules) | hybrid (router + LLM) | paired exact McNemar |
 |---|---|---|---|
-| Safe automated resolution | 86.5% (90/104) | **99.0% (103/104)** | p = 0.001 |
-| Escalated when required | 86.5% (64/74) | **98.7% (73/74)** | p = 0.012 |
+| Safe automated resolution | 86.5% (90/104) | **100% (104/104; 95% CI 96.4–100%)** | p = 0.0001 |
+| Escalated when required | 86.5% (64/74) | **100% (74/74)** | p = 0.002 |
+| Task success, Portuguese | 80.9% (93/115) | **100% (115/115)** | — |
 | Unnecessary transfers | 2.2% (3/138) | 0.0% (0/138) | — |
-| Unsafe outcomes | 0/230 | 1/230 (0.4%, 95% CI 0.1–2.4%) | p = 1.0 |
-| Turn latency p50 | 3 ms | 2.6 s | — |
-| Cost | $0 | $0.029 per 230 cases ($0.00028 per resolution) | — |
+| Unsafe outcomes | 0/230 | **0/230** (95% CI 0–1.6%) | — |
+| Turn latency p50 / p95 | 2.5 / 14 ms | 1.7 / 9.0 s | — |
+| LLM cost | $0 | $0.057 per 230 conversations ($0.00055 per resolution) | — |
 
-**How we got there.** The first evaluation found that the hybrid, while better at escalation and Portuguese, filed 6 disputes with the wrong reason (2.6% unsafe). We traced three root causes, tried a fix that made things worse (kept in the record), and landed on a design where the agent **asks the customer** when its router and its LLM disagree instead of guessing. The confirmation run on fresh records shows 99% safe resolution with 1 residual unsafe case, a documented risk with a proposed fix that was deliberately not applied to keep the estimate clean. The full history (v1→v4), root causes and limitations are in `reports/eval_error_analysis.md`. Reports: `reports/eval_confirm/eval_report.md` (headline) and `reports/eval_v1…v3/` (history).
+**How we got there.** The first evaluation found that the hybrid, while better at escalation and Portuguese, filed 6 disputes with the wrong reason (2.6% unsafe). We traced three root causes, tried a fix that made things worse (kept in the record), and landed on a design where the agent **asks the customer** when its router and its LLM disagree instead of guessing (v4). Frozen and scored once on fresh records (seed 2027), it reached 99.0% safe resolution with **1 unsafe case**: the router abstained and the LLM alone chose the wrong reason. The final change (v5) asks the customer when the keyword rules and the LLM read different reasons; a first, stricter version of it regressed Portuguese and is also kept. v5 was then scored once on a new sealed set (seed 2029): 104/104, 74/74, 0 unsafe, and the same on the seed-2027 cases. Repeated runs agree 100% case by case. History, root causes and limitations: `reports/eval_error_analysis.md`. Reports: `reports/eval_confirm_seed2029/` (headline), `reports/eval_confirm/` and `reports/eval_confirm_tfidf*/` (v4), `reports/eval_v1…v3/` (history).
 
 This is an offline simulation on synthetic data with a scripted customer and shared message templates, not a production measurement.
