@@ -297,3 +297,27 @@ def test_decimal_amount_is_never_an_otp(text):
 def test_plain_otp_still_parses(text, code):
     from src.agent.nlu import parse_otp
     assert parse_otp(text) == code
+
+
+class _AbstainingRouter:
+    """The router has no confident opinion (the confirmation run's one unsafe case: confidence 0.33)."""
+    version = "stub"
+
+    def predict(self, text):
+        return RouterResult("dispute_unrecognized", 0.33, "pt", False, 0.0, True, "stub")
+
+
+def test_llm_alone_never_picks_the_dispute_type_when_the_router_abstains(bank, frozen):  # residual unsafe, closed
+    agent = Agent(bank, _AbstainingRouter(), LLMExtractor(FakeLLM({"dispute_type": "unrecognized"})), mode="hybrid")
+    c = Conversation("u1")
+    agent.handle(c, "Essa cobrança da Uber é uma cobrança indevida")
+    r = auth(agent, c, bank)
+    assert r.stage == "classify" and disputes(bank) == []  # the customer is asked, nothing is filed on a guess
+
+
+def test_router_abstains_but_rules_and_llm_agree_keeps_the_type(bank, frozen):
+    agent = Agent(bank, _AbstainingRouter(), LLMExtractor(FakeLLM({"dispute_type": "unrecognized"})), mode="hybrid")
+    c = Conversation("u2")
+    agent.handle(c, "No reconozco un cargo de Uber")
+    r = auth(agent, c, bank)
+    assert r.stage == "confirm" and "não reconhecida" in r.reply

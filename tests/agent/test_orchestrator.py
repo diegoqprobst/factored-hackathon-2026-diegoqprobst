@@ -214,7 +214,9 @@ def test_hybrid_llm_understands_what_the_router_could_not(bank, frozen):
     agent = Agent(bank, StubRouter(), LLMExtractor(llm), mode="hybrid")
     c = Conversation("y1")
     r = agent.handle(c, "me cobraron algo raro ayer en el oxxo")
-    assert r.stage == "auth_doc" and c.dispute_type == "unrecognized" and r.cost_usd == 0.00005
+    # the router abstained: the LLM still finds the dispute, merchant and date, but never picks the sub-type alone
+    assert r.stage == "auth_doc" and c.intent == "dispute_unrecognized" and c.dispute_type is None
+    assert r.cost_usd == 0.00005
     calls_before_auth = len(llm.calls)
     auth(agent, c, bank)
     assert len(llm.calls) == calls_before_auth  # document and OTP never reach the LLM

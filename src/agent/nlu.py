@@ -46,6 +46,7 @@ class Extraction:
     date_to: date | None = None
     merchant: str | None = None
     dispute_type: str | None = None
+    dispute_type_rules: str | None = None  # the keyword rules alone; `dispute_type` may come from the model
     choice: int | None = None
     confirm: bool | None = None
     confirm_rules: bool | None = None  # the strict parser alone; `confirm` may also carry the model's "no"
@@ -56,7 +57,7 @@ class Extraction:
     source: str = "rules"
 
     def present_fields(self) -> list[str]:
-        return [f.name for f in fields(self) if f.name not in ("source", "confirm_rules") and getattr(self, f.name) not in (None, False)]
+        return [f.name for f in fields(self) if f.name not in ("source", "confirm_rules", "dispute_type_rules") and getattr(self, f.name) not in (None, False)]
 
 
 def parse_amount(text: str) -> float | None:
@@ -179,7 +180,7 @@ class RuleExtractor:
         date_from, date_to = parse_dates(text, self.today)
         return Extraction(
             amount=None if stage in (Stage.CONFIRM, Stage.BLOCK_OFFER, Stage.CLASSIFY) else parse_amount(text),
-            date_from=date_from, date_to=date_to, merchant=_merchant(text), dispute_type=dispute_type, choice=choice,
+            date_from=date_from, date_to=date_to, merchant=_merchant(text), dispute_type=dispute_type, dispute_type_rules=dispute_type, choice=choice,
             confirm=parse_confirm(text) if stage in (Stage.CONFIRM, Stage.BLOCK_OFFER) else None,
             confirm_rules=parse_confirm(text) if stage in (Stage.CONFIRM, Stage.BLOCK_OFFER) else None,
             charges_count=parse_charges_count(text),

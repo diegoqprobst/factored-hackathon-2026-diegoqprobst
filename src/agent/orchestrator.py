@@ -127,13 +127,17 @@ class Agent:
     def _resolve(route, ext) -> tuple[str | None, str | None]:
         """(intent, dispute sub-type). A card the customer explicitly says was lost/stolen goes first: blocking it is
         the urgent, protective action. For disputes, a sub-type is kept only when router and extractor agree (or only
-        one of them has one); on disagreement it stays None and the customer is asked — never guessed."""
+        one of them has one, except that the model alone never decides it); otherwise it stays None and the customer is
+        asked — never guessed."""
         intent = None if route.abstain else route.intent
         if ext.card_lost:
             return "card_lost_stolen", None
         router_type = DISPUTE_TYPE_BY_INTENT.get(intent) if intent in DISPUTE_INTENTS else None
         if intent is None and ext.dispute_type:
-            return INTENT_BY_DISPUTE_TYPE[ext.dispute_type], ext.dispute_type
+            # The router abstained, so the extractor is the only opinion. The model alone never picks the sub-type
+            # (a wrong reason on a filed dispute is unsafe): it stands only if the keyword rules read the same one.
+            agreed = ext.source != "llm" or ext.dispute_type_rules == ext.dispute_type
+            return INTENT_BY_DISPUTE_TYPE[ext.dispute_type], ext.dispute_type if agreed else None
         if router_type and ext.dispute_type and ext.dispute_type != router_type:
             return intent, None
         return intent, router_type or (ext.dispute_type if intent in DISPUTE_INTENTS else None)
