@@ -62,6 +62,13 @@ The agent is a finite-state machine: authenticate → identify the charge → cl
 - **PII to the LLM.** Credentials never reach the LLM; e-mails and document- or phone-like numbers are redacted from every other message before it is sent.
 
 
+## Cost per resolution and ROI
+
+[`reports/roi_analysis.md`](reports/roi_analysis.md) (`uv run python -m src.eda.roi`): dispute-intake volume, handling
+time and satisfaction from the dataset, automation rate and LLM cost from the evaluation. Per contact the agent costs
+about 5% of a human-handled one (assumed $10/agent-hour); at the evaluated containment it frees ~1,100 agent hours a
+year for this (small, synthetic) bank. Agent cost per hour and infrastructure cost are stated assumptions with scenarios.
+
 ## Evaluation (held-out, offline)
 
 Scripted conversations in ES/PT built from real sandbox records, covering normal, ambiguous, unsupported, human-required and adversarial cases (injection, session expiry, tool faults, cross-customer). Both systems ran the identical sealed cases. Headline numbers come from a **confirmation set of 230 fresh records** (seed 2027), sealed before scoring, with the agent frozen:
