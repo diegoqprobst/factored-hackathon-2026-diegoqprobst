@@ -13,5 +13,6 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with:
           python-version: "3.12"
+          enable-cache: false   # a restored uv cache made the interpreter segfault at startup; installs take ~1 s anyway
       - run: uv sync --frozen
       - run: uv run pytest -q
