@@ -1,0 +1,54 @@
+<section id="architecture" data-transition="fade" style="background:#F6F4EE; color:#14213D; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px; display:flex; flex-direction:column; gap:32px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:24px; letter-spacing:3px; text-transform:uppercase; color:#2F6DB5">02 · Architecture</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:64px; font-weight:700; line-height:1.1">The model understands; code decides</h2>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:24px; color:#6A7382">UNDERSTAND · learned, probabilistic</p>
+<div style="display:flex; gap:16px; align-items:center">
+<div style="flex:1; display:flex; flex-direction:column; gap:8px; background:#FFFFFF; padding:24px; border-radius:16px; border:2px solid #C9D3E0">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:28px; font-weight:700">Channels</h3>
+<p style="font-size:24px; line-height:1.35; color:#3F4A5A">Web chat with a live trace; Slack and Telegram adapters over one bridge.</p>
+</div>
+<x-shape kind="arrow-right" style="background:#2F6DB5; width:56px; height:28px"></x-shape>
+<div style="flex:1; display:flex; flex-direction:column; gap:8px; background:#FFFFFF; padding:24px; border-radius:16px; border:2px solid #2F6DB5">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:28px; font-weight:700">Learned router</h3>
+<p style="font-size:24px; line-height:1.35; color:#3F4A5A">Intent, language and prompt injection; abstains when unsure.</p>
+</div>
+<x-shape kind="arrow-right" style="background:#2F6DB5; width:56px; height:28px"></x-shape>
+<div style="flex:1; display:flex; flex-direction:column; gap:8px; background:#FFFFFF; padding:24px; border-radius:16px; border:2px solid #2F6DB5">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:28px; font-weight:700">LLM extraction</h3>
+<p style="font-size:24px; line-height:1.35; color:#3F4A5A">gemma-4-31b reads amount, merchant, dates. PII redacted; never sees ID or OTP.</p>
+</div>
+</div>
+</div>
+<div style="display:flex; flex-direction:column; gap:12px">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:24px; color:#6A7382">DECIDE AND ACT · deterministic, auditable</p>
+<div style="display:flex; gap:16px; align-items:center">
+<div style="flex:1; display:flex; flex-direction:column; gap:8px; background:#FFFFFF; padding:24px; border-radius:16px; border:2px solid #E0832B">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:28px; font-weight:700">State machine</h3>
+<p style="font-size:24px; line-height:1.35; color:#3F4A5A">10 stages, each with its own tool allowlist.</p>
+</div>
+<x-shape kind="arrow-right" style="background:#E0832B; width:48px; height:24px"></x-shape>
+<div style="flex:1; display:flex; flex-direction:column; gap:8px; background:#FFFFFF; padding:24px; border-radius:16px; border:2px solid #E0832B">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:28px; font-weight:700">Policy P1–P8</h3>
+<p style="font-size:24px; line-height:1.35; color:#3F4A5A">Versioned rules decide when a human must.</p>
+</div>
+<x-shape kind="arrow-right" style="background:#E0832B; width:48px; height:24px"></x-shape>
+<div style="flex:1; display:flex; flex-direction:column; gap:8px; background:#FFFFFF; padding:24px; border-radius:16px; border:2px solid #E0832B">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:28px; font-weight:700">Bank tools</h3>
+<p style="font-size:24px; line-height:1.35; color:#3F4A5A">OTP auth, scoped reads, writes read back.</p>
+</div>
+<x-shape kind="arrow-right" style="background:#E0832B; width:48px; height:24px"></x-shape>
+<div style="flex:1; display:flex; flex-direction:column; gap:8px; background:#FFFFFF; padding:24px; border-radius:16px; border:2px solid #E0832B">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:28px; font-weight:700">Reply or handoff</h3>
+<p style="font-size:24px; line-height:1.35; color:#3F4A5A">Verified facts only, or a JSON handoff.</p>
+</div>
+</div>
+</div>
+<div style="display:flex; gap:20px; align-items:center; background:#14213D; padding:24px 32px; border-radius:16px">
+<x-icon name="Lock" style="color:#F0A052; width:40px; height:40px"></x-icon>
+<p style="font-size:26px; line-height:1.35; color:#F6F4EE">A write happens only if the session is verified, policy allows it, rules <b>and</b> model both read a clear “yes”, and the record reads back. Every turn is traced.</p>
+</div>
+<aside>The core design choice: the model understands, code decides. The top row is the probabilistic part: a learned router for intent, language and prompt injection, and an LLM that extracts amounts, merchants and dates. The LLM never sees the document number or the OTP, and personal data is redacted before it. The bottom row is deterministic: a state machine where each stage can only call its own tools, a versioned policy for when a human must decide, and bank tools that are scoped to the authenticated customer. When the router and the LLM disagree, the agent asks the customer instead of guessing. And a write needs a verified session, a policy yes, both the rules and the model reading a clear yes, and a read-back check.</aside>
+</section>

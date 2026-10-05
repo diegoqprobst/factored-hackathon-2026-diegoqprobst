@@ -1,0 +1,47 @@
+<section id="router" data-transition="fade" style="background:#F6F4EE; color:#14213D; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:24px; letter-spacing:3px; text-transform:uppercase; color:#2F6DB5">03 · Learned component vs baseline</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:64px; font-weight:700; line-height:1.1">A learned router, chosen before the test set was opened</h2>
+</div>
+<div style="display:flex; gap:64px">
+<div style="width:880px; display:flex; flex-direction:column; gap:28px">
+<p style="font-size:26px; color:#6A7382">Test macro-F1 · 159 sealed, hand-written ES/PT utterances</p>
+<div style="display:flex; align-items:center; gap:20px">
+<p style="width:180px; font-size:28px">Keywords</p>
+<div style="width:413px; height:56px; background:#C9D3E0; border-radius:8px"></div>
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:32px; font-weight:600">0.666</p>
+</div>
+<div style="display:flex; align-items:center; gap:20px">
+<p style="width:180px; font-size:28px">TF-IDF</p>
+<div style="width:549px; height:56px; background:#E0832B; border-radius:8px"></div>
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:32px; font-weight:600">0.886</p>
+</div>
+<div style="display:flex; align-items:center; gap:20px">
+<p style="width:180px; font-size:28px">e5 embeddings</p>
+<div style="width:553px; height:56px; background:#2F6DB5; border-radius:8px"></div>
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:32px; font-weight:600">0.892</p>
+</div>
+<p style="font-size:26px; line-height:1.4; color:#3F4A5A">Prompt-injection F1 on test: 1.00 for both learned routers, 0.91 for keywords. e5 won by the rule; <span style="color:#B85E12"><b>TF-IDF is deployed</b></span> because it fits the 512 MB free tier.</p>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:24px">
+<div style="display:flex; flex-direction:column; gap:6px; border-left:6px solid #2F6DB5; padding:4px 0 4px 24px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:28px; font-weight:700">Labels</h3>
+<p style="font-size:24px; line-height:1.35; color:#3F4A5A">1,247 ES/PT utterances; the test set was written by hand and sealed in git first.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:6px; border-left:6px solid #2F6DB5; padding:4px 0 4px 24px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:28px; font-weight:700">No leakage</h3>
+<p style="font-size:24px; line-height:1.35; color:#3F4A5A">Split grouped by seed; near-duplicates removed: 0 test↔train hits at cosine ≥ 0.9.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:6px; border-left:6px solid #2F6DB5; padding:4px 0 4px 24px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:28px; font-weight:700">Pre-registered</h3>
+<p style="font-size:24px; line-height:1.35; color:#3F4A5A">Selection rule fixed in advance; abstention threshold tuned on validation only.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:6px; border-left:6px solid #E0832B; padding:4px 0 4px 24px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:28px; font-weight:700">Deployed choice checked</h3>
+<p style="font-size:24px; line-height:1.35; color:#3F4A5A">End to end, TF-IDF matched e5 on the held-out conversations (SAR 98.1–99.0% vs 99.0%).</p>
+</div>
+</div>
+</div>
+<p style="position:absolute; left:128px; bottom:64px; width:1664px; font-size:24px; color:#6A7382">train 828 · validation 260 · test 159 · reports/router_eval.md, reports/router_error_analysis.md</p>
+<aside>The learned component is the router: intent, language and prompt-injection detection. There is no usable conversation text in the dataset, so we labelled 1,247 Spanish and Portuguese utterances, and the test set was written by hand and sealed in git before anything else existed. Splits are grouped so paraphrases of the same seed never cross, and we removed near-duplicates. The selection rule was fixed in advance. On the test set, both learned routers beat the keyword baseline by more than 20 points of macro-F1. The embedding model won by the rule, but we deploy TF-IDF because it fits the free tier, and we checked that end to end it matches.</aside>
+</section>

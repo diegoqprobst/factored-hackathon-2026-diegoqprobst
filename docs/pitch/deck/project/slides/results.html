@@ -1,0 +1,38 @@
+<section id="results" data-transition="fade" style="background:#14213D; color:#F6F4EE; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column; gap:44px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:24px; letter-spacing:3px; text-transform:uppercase; color:#F0A052">04 · Held-out evaluation</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:64px; font-weight:700; line-height:1.1; color:#F6F4EE">230 sealed conversations on fresh records, same cases for both systems</h2>
+</div>
+<div style="display:flex; gap:56px">
+<div style="width:1060px; display:flex; flex-direction:column; gap:16px">
+<table style="font-size:26px; color:#F6F4EE; width:1060px">
+<tr style="background:#1E2F52"><th style="width:38%">Metric</th><th style="width:19%; text-align:right">Rules</th><th style="width:23%; text-align:right">Hybrid</th><th style="width:20%; text-align:right">Paired test</th></tr>
+<tr><td>Safe automated resolution</td><td style="text-align:right">86.5%</td><td style="text-align:right; color:#F0A052"><b>98.1%</b></td><td style="text-align:right">p = 0.004</td></tr>
+<tr><td>Escalated when required</td><td style="text-align:right">86.5%</td><td style="text-align:right; color:#F0A052"><b>100%</b></td><td style="text-align:right">p = 0.002</td></tr>
+<tr><td>Task success, Portuguese</td><td style="text-align:right">80.9%</td><td style="text-align:right; color:#F0A052"><b>98.3%</b></td><td style="text-align:right">p &lt; 0.001</td></tr>
+<tr><td>Unsafe outcomes</td><td style="text-align:right">0 / 230</td><td style="text-align:right">1 / 230</td><td style="text-align:right">p = 1.0</td></tr>
+<tr><td>Unnecessary transfers</td><td style="text-align:right">2.2%</td><td style="text-align:right">0.7%</td><td style="text-align:right">—</td></tr>
+<tr><td>Turn latency p50 / p95</td><td style="text-align:right">2.5 / 11 ms</td><td style="text-align:right">1.4 / 6.4 s</td><td style="text-align:right">—</td></tr>
+<tr><td>LLM cost per resolution</td><td style="text-align:right">$0</td><td style="text-align:right">$0.0003</td><td style="text-align:right">—</td></tr>
+</table>
+<p style="font-size:24px; line-height:1.4; color:#9FB0C6">Deployed configuration, final run. Run-to-run range for the hybrid: SAR 98.1–99.0%, escalation 98.7–100%.</p>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:20px">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:32px; font-weight:700; color:#F6F4EE">How we got here</h3>
+<div style="display:flex; flex-direction:column; gap:4px; border-left:4px solid #6A7FA3; padding-left:20px">
+<p style="font-size:24px; line-height:1.35; color:#C9D3E0"><b>v2:</b> 6 unsafe. The router alone picked the dispute reason.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:4px; border-left:4px solid #6A7FA3; padding-left:20px">
+<p style="font-size:24px; line-height:1.35; color:#C9D3E0"><b>v3:</b> first fix regressed. Kept in the report.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:4px; border-left:4px solid #F0A052; padding-left:20px">
+<p style="font-size:24px; line-height:1.35; color:#C9D3E0"><b>v4:</b> when router and LLM disagree, ask the customer.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:4px; border-left:4px solid #F0A052; padding-left:20px">
+<p style="font-size:24px; line-height:1.35; color:#C9D3E0"><b>Then frozen</b> and scored once on a new seed.</p>
+</div>
+</div>
+</div>
+<p style="position:absolute; left:128px; bottom:64px; width:1664px; font-size:24px; color:#9FB0C6">Wilson 95% CIs and exact McNemar tests · adversarial cases: injection, expired session, cross-customer, tool faults · reports/eval_confirm*/</p>
+<aside>How do we know it works? 230 scripted conversations in Spanish and Portuguese, built from real sandbox records, sealed in git, and run through both systems. Scoring is deterministic: it reads what the agent wrote to the bank and what it handed off, not what it said. The hybrid safely resolves 98 percent of in-scope disputes against 86.5 for rules, makes every required handoff, and the gap is biggest in Portuguese. It includes adversarial cases: prompt injection, expired sessions, another customer's charge, and tool failures. It has one unsafe outcome out of 230, and we say so. We also show how we got here: version 2 had six unsafe filings, our first fix made things worse and we kept that run in the report, the final fix is to ask the customer when the router and the model disagree. Then the agent was frozen and scored once on a new set of records.</aside>
+</section>

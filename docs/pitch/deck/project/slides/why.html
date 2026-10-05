@@ -1,0 +1,34 @@
+<section id="why" data-transition="fade" style="background:#F6F4EE; color:#14213D; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column; gap:48px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:24px; letter-spacing:3px; text-transform:uppercase; color:#2F6DB5">01 · Workflow choice, from the data</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:64px; font-weight:700; line-height:1.1">Disputes are where service fails, and where the data can be trusted</h2>
+</div>
+<div style="display:flex; gap:48px; flex:1">
+<div style="flex:1; display:flex; flex-direction:column; gap:20px">
+<table style="font-size:28px; color:#14213D; width:820px">
+<tr><th style="width:34%">Contact reason</th><th style="width:18%; text-align:right">Share</th><th style="width:28%; text-align:right">1st-contact fix</th><th style="width:20%; text-align:right">Follow-up</th></tr>
+<tr><td>Transactional</td><td style="text-align:right">35.0%</td><td style="text-align:right">92%</td><td style="text-align:right">22%</td></tr>
+<tr><td>Product</td><td style="text-align:right">22.0%</td><td style="text-align:right">90%</td><td style="text-align:right">24%</td></tr>
+<tr style="background:#FBE3CC"><td><b>Complaint</b></td><td style="text-align:right"><b>17.1%</b></td><td style="text-align:right"><b>44%</b></td><td style="text-align:right"><b>63%</b></td></tr>
+<tr><td>Technical</td><td style="text-align:right">15.0%</td><td style="text-align:right">70%</td><td style="text-align:right">41%</td></tr>
+</table>
+<p style="font-size:26px; line-height:1.4; color:#3F4A5A">Complaint contacts take 431 s at the median, 2× a transactional one. Unrecognized charges and undue fees are ≈40% of the 67k formal complaints.</p>
+</div>
+<div style="width:760px; display:flex; flex-direction:column; gap:20px">
+<div style="display:flex; flex-direction:column; gap:8px; background:#FFFFFF; padding:24px 32px; border-radius:16px; border-left:6px solid #2F6DB5">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:32px; font-weight:700">A ground truth to verify against</h3>
+<p style="font-size:26px; line-height:1.35; color:#3F4A5A">4.43M transactions, 0 orphans or owner mismatches: every named charge can be checked.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:8px; background:#FFFFFF; padding:24px 32px; border-radius:16px; border-left:6px solid #E0832B">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:32px; font-weight:700">Isolation cannot be assumed</h3>
+<p style="font-size:26px; line-height:1.35; color:#3F4A5A">0 of 44,570 complaint products are owned by the complainant: enforce ownership in code.</p>
+</div>
+<div style="display:flex; flex-direction:column; gap:8px; background:#FFFFFF; padding:24px 32px; border-radius:16px; border-left:6px solid #2F6DB5">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:32px; font-weight:700">No usable chat text</h3>
+<p style="font-size:26px; line-height:1.35; color:#3F4A5A">Transcripts are 2 blank templates, so the ES/PT intent set is team-labelled (declared).</p>
+</div>
+</div>
+</div>
+<p style="position:absolute; left:128px; bottom:64px; width:1664px; font-size:24px; color:#6A7382">686k interactions, 2023-06 → 2026-06 · pipeline run: 0 contract rejections, 0 FK violations · reports/eda_findings.md</p>
+<aside>Why disputes? We picked the workflow from the data, not from a guess. Complaint contacts are fixed on first contact only 44 percent of the time, versus 92 for transactional ones, and 63 percent need a follow-up. Unrecognized charges and undue fees are about 40 percent of formal complaints. Disputes also have the one trustworthy ground truth in this dataset: transactions tie cleanly to products and customers, so the agent can verify the exact charge. And the data shows why customer isolation must live in code: not one complaint product belongs to the person who complained.</aside>
+</section>

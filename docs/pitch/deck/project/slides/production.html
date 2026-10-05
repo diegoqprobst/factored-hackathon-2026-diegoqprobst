@@ -1,0 +1,31 @@
+<section id="production" data-transition="fade" style="background:#F6F4EE; color:#14213D; font-family:'IBM Plex Sans', Arial, sans-serif; padding:128px 128px 160px; display:flex; flex-direction:column; gap:44px">
+<div style="display:flex; flex-direction:column; gap:16px">
+<p style="font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:24px; letter-spacing:3px; text-transform:uppercase; color:#2F6DB5">05 · Route to production</p>
+<h2 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:64px; font-weight:700; line-height:1.1">Running today, and what it would take to make it real</h2>
+</div>
+<div style="display:flex; gap:40px">
+<div style="flex:1; display:flex; flex-direction:column; gap:18px; background:#FFFFFF; padding:36px; border-radius:16px; border-top:6px solid #2F6DB5">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:32px; font-weight:700">Running now</h3>
+<ul style="font-size:24px; line-height:1.4; color:#3F4A5A">
+<li>Live container on Render; bank data from a private dataset, startup fails closed</li>
+<li>Every turn traced: route, LLM tokens and cost, tool calls, policy rule</li>
+<li>Bounded retries; rules fallback when the LLM fails or hits its daily $0.50 cap</li>
+<li>OTP with rate limit and lockout, signed sessions, idempotent writes</li>
+<li>347 tests; make pipeline, router and eval rebuild every number</li>
+</ul>
+</div>
+<div style="flex:1; display:flex; flex-direction:column; gap:18px; background:#FFFFFF; padding:36px; border-radius:16px; border-top:6px solid #E0832B">
+<h3 style="font-family:'Space Grotesk', Arial, sans-serif; font-size:32px; font-weight:700">Honest gaps → next step</h3>
+<ul style="font-size:24px; line-height:1.4; color:#3F4A5A">
+<li>Data is synthetic Spanish; PT is measured on our own labelled sets → real PT traffic</li>
+<li>Eval reuses message templates → new phrasings from real contacts</li>
+<li>1 unsafe case: LLM alone chose the reason → ask when only one source decides</li>
+<li>One process, in-memory sessions, SQLite → Postgres, Redis, real SMS and IdP</li>
+<li>Handoff is a JSON payload → an agent console and drift monitoring</li>
+</ul>
+</div>
+</div>
+<p style="font-family:'Space Grotesk', Arial, sans-serif; font-size:36px; font-weight:700; color:#14213D">Build something that works, prove it works, and know when not to act.</p>
+<p style="position:absolute; left:128px; bottom:64px; width:1664px; font-family:'IBM Plex Mono', 'Courier New', monospace; font-size:24px; color:#6A7382">latam-dispute-agent.onrender.com · github.com/diegoqprobst/factored-hackathon-2026-diegoqprobst</p>
+<aside>This is running today: a live container, every turn traced with its cost, bounded retries and a rules fallback when the model fails or the daily budget runs out, OTP with lockout, signed sessions and idempotent writes, and every number in this deck can be rebuilt from the repo. And here is what is missing. The data is synthetic and only Spanish, so Portuguese is measured on sets we labelled. The evaluation reuses message templates. There is one residual unsafe case, and the fix is to ask the customer whenever only one source has an opinion. It runs as one process with in-memory sessions on SQLite; in production that is Postgres, Redis, a real SMS provider and identity provider, and a console for the humans who receive handoffs. Thank you.</aside>
+</section>
